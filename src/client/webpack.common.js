@@ -11,14 +11,28 @@ module.exports = {
                 use: 'ts-loader',
                 exclude: /node_modules/,
             },
+            // {
+            //     test: /\.js$/,
+            //     exclude: /node_modules/,
+            //     use: {
+            //         loader: 'babel-loader',
+            //         options: {
+            //             presets: ['@babel/preset-env'],
+            //         },
+            //     },
+            // },
+            {
+                test: /\.scss$/,
+                use: ['style-loader', 'css-loader', 'sass-loader'],
+            },
         ],
     },
     resolve: {
         fallback: { "os": false },
         alias: {
-            three: path.resolve('./node_modules/three'),
+            // three: path.resolve('./node_modules/three'),
             // three: path.resolve('./src/client/libs/three.js'),
-            threeCSG: path.resolve('./src/client/libs/ThreeCSG'),
+            // threeCSG: path.resolve('./src/client/libs/ThreeCSG'),
         },
         extensions: ['.tsx', '.ts', '.js'],
 
