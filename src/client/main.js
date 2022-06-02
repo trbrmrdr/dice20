@@ -29,7 +29,7 @@ document.body.appendChild(stats.dom)
 
 const gui = new GUI();
 
-const options = {
+var options = {
 	global: {
 		background: CNum("backColor", 0x20000),
 	},
@@ -58,11 +58,33 @@ const options = {
 
 
 	anim: {
-		enableRotation: false,
-		position: CNum("anim-position", 0.5),
-	}
+		color: {
+			h: Math.random(),
+			h_end: Math.random(),
 
+			l: 0.7,
+
+			s: 0.03,
+			s_end: 0.5
+		},
+
+		enableRotation: false,
+		show_all: false,
+		position_number: CNum("anim-position_number", -0.09),
+
+		speed: CNum("anim-speed", 2.74),
+		delay: CNum("anim-delay", 0.27),
+
+
+		raduis_main: CNum("anim-raduis_main", 1.5),
+
+		radius_small_light: CNum("anim-radius_small_light", 1.0),
+		position_light: CNum("anim-position_light", 1),
+	}
 };
+
+// Cookies.remove("anim-color")
+options.anim.color = CJson("anim-color", options.anim.color)
 
 //_______________________________________________________________
 const CANVAS_SIZE = {
@@ -70,7 +92,7 @@ const CANVAS_SIZE = {
 	height: 1024,
 }
 
-var enable_rays = false;
+var enable_rays = true;
 window.create_anim = function (id_block = "canvas-container") {
 
 	const canvas_container = document.getElementById(id_block);
@@ -171,47 +193,159 @@ window.create_anim = function (id_block = "canvas-container") {
 
 
 	//###########################################################################
-	let material_dice;//Material
-	let dice_obj = {
+
+	let diceOBJ = {
+		resetAngle: () => {
+			if (diceOBJ.group) {
+				diceOBJ.group.rotation.set(0, 0, 0);
+				diceOBJ.groupOcl.rotation.set(0, 0, 0);
+			}
+		},
+		rotate: (delta, elapsed) => {
+			const rotateX = delta / sinft(5, 10, elapsed) * Math.PI * 2;
+			const rotateY = delta / sinft(5, 7, elapsed) * Math.PI * 2;
+			const rotateZ = (delta / 3) * Math.PI * 2;
+			group_rotate(diceOBJ.group, rotateX, rotateY, rotateZ);
+			group_rotate(diceOBJ.groupOcl, rotateX, rotateY, rotateZ)
+		},
+
 		group: null,
 
 		center: null,
-
+		radius: -1,//TODO delete
 		mesh_dice: null,
 		mesh_diceIn: null,
-		number: []
-	}; //:THREE.Group
-	let mesh_number//: THREE.Object3D | undefined;
+
+		//init material
+		//god light clone object
+		//
+		init: () => {
+
+			//material mesh_dice
+			if (true) {
+				diceOBJ.mesh_dice.material = new THREE.MeshPhysicalMaterial()
+				const mat = diceOBJ.mesh_dice.material;
+				mat.reflectivity = options.dice.reflectivity
+				mat.roughness = options.dice.roughness
+				mat.transmission = options.dice.transmission
+				mat.thickness = options.dice.thickness
+
+				mat.map = dice_map
+
+
+				// mat.bumpMap = dice_bump
+				switch (options.dice.typeBump) {
+					case "none":
+						mat.bumpMap = null
+						break;
+					case "type_1":
+						mat.bumpMap = dice_bump
+						break;
+					case "type_2":
+						mat.bumpMap = dice_bump_in
+						break;
+				}
+
+				mat.bumpScale = options.dice.bumpScale
+			}
+			//material diceIn
+			if (true) {
+				diceOBJ.mesh_diceIn.scale.set(options.diceIn.scale, options.diceIn.scale, options.diceIn.scale)
+
+				diceOBJ.mesh_diceIn.material = new THREE.MeshStandardMaterial()
+				const mat = diceOBJ.mesh_diceIn.material
+				mat.roughness = options.diceIn.roughness
+				mat.metalness = options.diceIn.metalness
+
+				mat.bumpScale = options.diceIn.bumpScale
+				mat.bumpMap = dice_bump_in
+			}
+
+			diceOBJ.center = getCenter(diceOBJ.mesh_dice);
+			diceOBJ.radius = diceOBJ.mesh_dice.geometry.boundingSphere.radius
+
+			// diceOBJ.mesh_dice.removeFromParent();diceOBJ.mesh_dice = null;
+
+			// mesh_number.removeFromParent(); mesh_number = null;
+
+			const gmat = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
+			diceOBJ.groupOcl.add(cloneGeometry(diceOBJ.mesh_diceIn, gmat));
+			// group_ocl.add(cloneGeometry(mesh_number, gmat));
+
+		},
+
+		numbers: [],
+		addNumber: (meshNumber) => {
+			//перед установкой материала всем цифрами - из примера
+			// scene.traverse(disposeMaterial);
+
+			meshNumber.layers.enable(BLOOM_SCENE);
+			meshNumber.material = new THREE.MeshBasicMaterial();
+
+			const numberObj = {
+				obj: meshNumber,
+				center: getCenter(meshNumber),
+				color: {
+					h: options.anim.color.h,
+					l: options.anim.color.l,
+					s: options.anim.color.s
+				},
+
+				light: new THREE.Mesh(
+					new THREE.IcosahedronGeometry(0.2, 20),
+					new THREE.MeshBasicMaterial({ color: 0x77bbff })
+				)
+			}
+			diceOBJ.numbers.push(numberObj);
+			meshNumber.material.color.setHSL(numberObj.color.h, numberObj.color.l, numberObj.color.s);
+
+
+			// if (diceOBJ.numbers.length > 1) return
+			const light = numberObj.light
+			diceOBJ.groupOcl.add(light);
+
+			light.position.copy(numberObj.center);
+			// diceOBJ.vlight.scale.set(scaleR, scaleR, scaleR)
+		},
+
+
+		groupOcl: new THREE.Group(),
+		vlight: null,
+
+		initLight: (scaleR) => {
+			if (diceOBJ.vlight) {
+				diceOBJ.vlight.scale.set(scaleR, scaleR, scaleR)
+				return
+			}
+
+			diceOBJ.vlight = new THREE.Mesh(
+				new THREE.IcosahedronGeometry(0.35, 20),
+				new THREE.MeshBasicMaterial({ color: 0x77bbff })
+			);
+			diceOBJ.groupOcl.add(diceOBJ.vlight);
+
+			diceOBJ.vlight.position.copy(diceOBJ.center);
+			diceOBJ.vlight.scale.set(scaleR, scaleR, scaleR)
+		}
+	};
 
 	const textureLoader = new THREE.TextureLoader();
 	const dice_map = textureLoader.load("data/barhat.jpeg");
 	const dice_bump_in = textureLoader.load("data/noise_bump_in_1.png");
 	const dice_bump = textureLoader.load("data/barhat_bump.jpg");
 
-	let dirLights = [];
-	let spotLights = [];
+	const dirLights = [];
+	const spotLights = [];
 
-	let group_ocl;
-	let vlight;
-
-	var oclcamera = new THREE.PerspectiveCamera(45, CANVAS_SIZE.width / CANVAS_SIZE.height, 1, 200);
+	// var oclcamera = new THREE.PerspectiveCamera(45, CANVAS_SIZE.width / CANVAS_SIZE.height, 1, 200);
 	// oclcamera.position.copy(camera.position);
 
-	var oclscene = new THREE.Scene();
+	const oclscene = new THREE.Scene();
 	// oclscene.add(new THREE.AmbientLight(0xffffff));
 	// oclscene.background = new THREE.Color(0x000000);
-
 	// oclscene.add(new THREE.GridHelper(100, 100, 0x000000, 0x000000));
 
-	vlight = new THREE.Mesh(
-		new THREE.IcosahedronGeometry(0.35, 20),
-		new THREE.MeshBasicMaterial({
-			color: 0x77bbff
-		})
-	);
-	group_ocl = new THREE.Group();
-	group_ocl.add(vlight);
-	oclscene.add(group_ocl);
+	oclscene.add(diceOBJ.groupOcl);
 
 	//______________________________________________________________
 	raysParam.rtOcl = new THREE.WebGLRenderTarget(CANVAS_SIZE.width, CANVAS_SIZE.height, renderTargetParameters);
@@ -288,7 +422,7 @@ window.create_anim = function (id_block = "canvas-container") {
 	new ObjectLoader().load("data/scene_2.json",
 		function (obj) {
 			if (obj.parent) return
-			if (dice_obj.group) return;
+			if (diceOBJ.group) return;
 
 			obj.children.forEach((obj) => {
 
@@ -306,13 +440,13 @@ window.create_anim = function (id_block = "canvas-container") {
 
 			// scene.add(new AmbientLight(0x404040))
 
-			dice_obj.group = obj.getObjectByName("dice.obj");
+			diceOBJ.group = obj.getObjectByName("dice.obj");
 
-			dice_obj.mesh_dice = obj.getObjectByName("DICE");
-			dice_obj.mesh_diceIn = obj.getObjectByName("DICE_in");
+			diceOBJ.mesh_dice = obj.getObjectByName("DICE");
+			diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_in");
 
-			dice_obj.mesh_dice.removeFromParent();
-			dice_obj.mesh_diceIn.removeFromParent();
+			diceOBJ.mesh_dice.removeFromParent();
+			diceOBJ.mesh_diceIn.removeFromParent();
 			scene.add(obj);
 			load_two();
 		}
@@ -325,82 +459,31 @@ window.create_anim = function (id_block = "canvas-container") {
 
 				console.log(obj)
 
-				dice_obj.group.add(obj)
-				scene.add(dice_obj.group);
+				diceOBJ.mesh_dice = obj.getObjectByName("DICE_dice");
+				diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_IN_dice_in");
 
-				dice_obj.mesh_dice = obj.getObjectByName("DICE_dice");
-				dice_obj.mesh_diceIn = obj.getObjectByName("DICE_IN_dice_in");
+				// diceOBJ.mesh_diceIn.removeFromParent()
+				// diceOBJ.mesh_diceIn = diceOBJ.mesh_dice.clone()
+				// obj.add(diceOBJ.mesh_diceIn)
+				//____________________
+				diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_dice");
+				diceOBJ.mesh_dice = obj.getObjectByName("DICE_IN_dice_in");
+				//____________________
 
-				if (true) {
-					dice_obj.mesh_dice.material = new THREE.MeshPhysicalMaterial()
-					const mat = dice_obj.mesh_dice.material;
-					mat.reflectivity = options.dice.reflectivity
-					mat.roughness = options.dice.roughness
-					mat.transmission = options.dice.transmission
-					mat.thickness = options.dice.thickness
+				diceOBJ.group.add(obj)
+				scene.add(diceOBJ.group);
 
-					mat.map = dice_map
+				diceOBJ.init()
 
-
-					// mat.bumpMap = dice_bump
-					switch (options.dice.typeBump) {
-						case "none":
-							mat.bumpMap = null
-							break;
-						case "type_1":
-							mat.bumpMap = dice_bump
-							break;
-						case "type_2":
-							mat.bumpMap = dice_bump_in
-							break;
-					}
-
-					mat.bumpScale = options.dice.bumpScale
-				}
-
-				if (true) {
-					dice_obj.mesh_diceIn.scale.set(options.diceIn.scale, options.diceIn.scale, options.diceIn.scale)
-
-					dice_obj.mesh_diceIn.material = new THREE.MeshStandardMaterial()
-					const mat = dice_obj.mesh_diceIn.material
-					mat.roughness = options.diceIn.roughness
-					mat.metalness = options.diceIn.metalness
-
-					mat.bumpScale = options.diceIn.bumpScale
-					mat.bumpMap = dice_bump_in
-				}
-
-
-				dice_obj.center = getCenter(dice_obj.mesh_dice);
 				for (let i = 1; i <= 20; ++i) {
 					let ni = (i < 10 ? '0' : '') + i
-
 					let obj_number = obj.getObjectByName(`n${ni}`)
 
-					dice_obj.number.push(
-						{
-							obj: obj_number,
-							center: getCenter(obj_number)
-						}
-					);
+					diceOBJ.addNumber(obj_number)
 				}
+				diceOBJ.initLight(options.anim.raduis)
 
-
-
-
-				// dice_obj.mesh_dice.removeFromParent();dice_obj.mesh_dice = null;
-
-
-				// mesh_number.removeFromParent(); mesh_number = null;
-
-				// vlight.position.copy(center_mesh);
-
-
-				// var gmat = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
-				// group_ocl.add(cloneGeometry(dice_obj.mesh_dice, gmat));
-				// group_ocl.add(cloneGeometry(mesh_number, gmat));
-
-				setupConfigs()
+				setupGUIConfigs()
 			},
 			// called when loading is in progresses
 			function (xhr) {
@@ -412,8 +495,8 @@ window.create_anim = function (id_block = "canvas-container") {
 			});
 	};
 
-	var map = null
-	function setupConfigs() {
+
+	function setupGUIConfigs() {
 		//global
 		if (true) {
 			let global_gp = gui.addFolder("Global");
@@ -429,40 +512,40 @@ window.create_anim = function (id_block = "canvas-container") {
 			let dice_in_gp = gui.addFolder("dice in");
 
 			dice_in_gp.addColor(options.diceIn, "color").onChange((value) => {
-				dice_obj.mesh_diceIn.material.color.set(CSet("'diceIn-color", value))
+				diceOBJ.mesh_diceIn.material.color.set(CSet("'diceIn-color", value))
 			});
 
 			dice_in_gp.add(options.diceIn, "roughness", 0, 1, 0.01).onChange((value) => {
-				dice_obj.mesh_diceIn.material.roughness = CSet("diceIn-roughness", value)
+				diceOBJ.mesh_diceIn.material.roughness = CSet("diceIn-roughness", value)
 			});
 			dice_in_gp.add(options.diceIn, "metalness", 0, 1, 0.01).onChange((value) => {
-				dice_obj.mesh_diceIn.material.metalness = CSet("diceIn-metalness", value)
+				diceOBJ.mesh_diceIn.material.metalness = CSet("diceIn-metalness", value)
 			});
 			dice_in_gp.add(options.diceIn, "bumpScale", 0, 3, 0.01).onChange((value) => {
-				dice_obj.mesh_diceIn.material.bumpScale = CSet("diceIn-bumpScale", value)
+				diceOBJ.mesh_diceIn.material.bumpScale = CSet("diceIn-bumpScale", value)
 			});
 
 			dice_in_gp.add(options.diceIn, "scale", 0, 1, 0.01).onChange((value) => {
 				let scale = CSet("diceIn-scale", value)
-				dice_obj.mesh_diceIn.scale.set(scale, scale, scale)
+				diceOBJ.mesh_diceIn.scale.set(scale, scale, scale)
 			});
-			dice_in_gp.open();
+			// dice_in_gp.open();
 		}
 		//dice 
 		if (true) {
 			let dice_gp = gui.addFolder("Dice");
 
 			dice_gp.add(options.dice, "reflectivity", 0, 1, 0.01).onChange((value) => {
-				dice_obj.mesh_dice.material.reflectivity = CSet("dice-reflectivity", value)
+				diceOBJ.mesh_dice.material.reflectivity = CSet("dice-reflectivity", value)
 			});
 			dice_gp.add(options.dice, "roughness", 0, 1, 0.01).onChange((value) => {
-				dice_obj.mesh_dice.material.roughness = CSet("dice-roughness", value)
+				diceOBJ.mesh_dice.material.roughness = CSet("dice-roughness", value)
 			});
 			dice_gp.add(options.dice, "transmission", 0, 1, 0.01).onChange((value) => {
-				dice_obj.mesh_dice.material.transmission = CSet("dice-transmission", value)
+				diceOBJ.mesh_dice.material.transmission = CSet("dice-transmission", value)
 			});
 			dice_gp.add(options.dice, "thickness", 0, 4, 0.01).onChange((value) => {
-				dice_obj.mesh_dice.material.thickness = CSet("dice-thickness", value)
+				diceOBJ.mesh_dice.material.thickness = CSet("dice-thickness", value)
 			});
 
 
@@ -472,30 +555,22 @@ window.create_anim = function (id_block = "canvas-container") {
 
 				switch (value) {
 					case "none":
-						dice_obj.mesh_dice.material.bumpMap = null
+						diceOBJ.mesh_dice.material.bumpMap = null
 						break;
 					case "type_1":
-						dice_obj.mesh_dice.material.bumpMap = dice_bump
+						diceOBJ.mesh_dice.material.bumpMap = dice_bump
 						break;
 					case "type_2":
-						dice_obj.mesh_dice.material.bumpMap = dice_bump_in
+						diceOBJ.mesh_dice.material.bumpMap = dice_bump_in
 						break;
 				}
 
-				dice_obj.mesh_dice.material.needsUpdate = true;
+				diceOBJ.mesh_dice.material.needsUpdate = true;
 			});
 			dice_gp.add(options.dice, "bumpScale", 0, 3, 0.01).onChange((value) => {
-				dice_obj.mesh_dice.material.bumpScale = CSet("dice-bumpScale", value)
+				diceOBJ.mesh_dice.material.bumpScale = CSet("dice-bumpScale", value)
 			});
 
-			// material_gp.add(options, "typeBump").onChange((value) => {
-			// 	if (value) {
-			// 		material_dice.bumpMap = bumpTexture_0;
-			// 	} else {
-			// 		material_dice.bumpMap = bumpTexture_1;
-			// 	}
-			// 	material_dice.needsUpdate = true;
-			// });
 		}
 
 		//Lights
@@ -536,7 +611,6 @@ window.create_anim = function (id_block = "canvas-container") {
 
 		}
 
-		//____________
 		//godrays
 		if (true) {
 			let rays_gp = gui.addFolder("Rays");
@@ -569,45 +643,60 @@ window.create_anim = function (id_block = "canvas-container") {
 				bloomPass.radius = CSet("bloom-radius", value);
 			});
 
-			folder.add(options_bloom, 'anim_d_r', 0.0, 2.0, 0.01).onChange(function (value) {
-				CSet("bloom-anim_d_r", value);
+			folder.add(options_bloom, 'radius_end', 0.0, 2.0, 0.01).onChange(function (value) {
+				CSet("bloom-radius_end", value);
 			});
 			folder.add(options_bloom, 'anim_speed', 1.0, 10.0, 0.1).onChange(function (value) {
 				CSet("bloom-anim_speed", value);
 			});
-			folder.open();
-		}
-		scene.traverse(disposeMaterial);
-		if (dice_obj.number.length > 0) {
-			// scene.children.length = 0;
-
-			dice_obj.number.forEach((number) => {
-
-				const color = new THREE.Color();
-				color.setHSL(Math.random(), 0.7, Math.random() * 0.2 + 0.05);
-
-				const material = new THREE.MeshBasicMaterial({ color: color });
-
-				number.obj.layers.enable(BLOOM_SCENE);
-				number.obj.material = material;
-			})
-
+			// folder.open();
 		}
 		//_______________
 		//Anim
 		if (true) {
-			const anim_gp = gui.addFolder('Anim');
-			anim_gp.add(options.anim, "position", 0, 1, 0.01).onChange((value) => {
-				CSet("anim-position", value)
-			})
+			const anim_c_hls_gp = gui.addFolder('Anim_color_hls');
 
+			var save_anim_json = (value) => { CSet("anim-color", options.anim.color) }
+
+			anim_c_hls_gp.add(options.anim.color, "h", 0, 1, 0.01).onChange(save_anim_json)
+			anim_c_hls_gp.add(options.anim.color, "h_end", 0, 1, 0.01).onChange(save_anim_json)
+
+			anim_c_hls_gp.add(options.anim.color, "l", 0, 1, 0.01).onChange(save_anim_json)
+			anim_c_hls_gp.add(options.anim.color, "s", 0, 1, 0.01).onChange(save_anim_json)
+			anim_c_hls_gp.add(options.anim.color, "s_end", 0, 1, 0.01).onChange(save_anim_json)
+			// anim_c_hls_gp.open()
+
+			const anim_gp = gui.addFolder('Anim');
 			anim_gp.add(options.anim, "enableRotation").onChange(() => {
-				if (dice_obj.group) {
-					dice_obj.group.rotation.set(0, 0, 0);
-					group_ocl.rotation.set(0, 0, 0);
-				}
+				diceOBJ.resetAngle()
 			});
 
+			anim_gp.add(options.anim, "show_all").onChange(() => {
+			});
+
+			anim_gp.add(options.anim, "position_number", -1, 1, 0.01).onChange((value) => {
+				CSet("anim-position_number", value)
+			})
+			anim_gp.add(options.anim, "speed", 0, 3, 0.01).onChange((value) => {
+				CSet("anim-speed", value)
+			})
+			anim_gp.add(options.anim, "delay", 0, 1, 0.01).onChange((value) => {
+				CSet("anim-delay", value)
+			})
+
+
+			anim_gp.add(options.anim, "raduis_main", 0, 5, 0.01).onChange((value) => {
+				CSet("anim-raduis_main", value)
+				diceOBJ.initLight(value)
+			})
+
+			anim_gp.add(options.anim, "radius_small_light", 0, 4, 0.01).onChange((value) => {
+				CSet("anim-radius_small_light", value)
+
+			})
+			anim_gp.add(options.anim, "position_light", -0.5, 5, 0.01).onChange((value) => {
+				CSet("anim-position_light", value)
+			})
 
 			anim_gp.open()
 		}
@@ -622,63 +711,98 @@ window.create_anim = function (id_block = "canvas-container") {
 		draw();
 	}
 
+	var once = true
 	function draw() {
 		const delta = clock.getDelta();
 
+		let all_time = options.anim.delay + options.anim.speed
+		let curr_time = mod(clock.elapsedTime, all_time)
 
-		dice_obj.number.forEach((obj_num, i) => {
-			// obj.material.opacity = i * clock.elapsedTime
+		//resort number
+		if (false) {
+			if (curr_time <= 1) { once = true }
+			if (curr_time >= all_time - 0.1 && once) {
+				once = false
+				shuffle(diceOBJ.numbers)
+			}
+		}
 
-			const sub = new Vector3().subVectors(dice_obj.center, obj_num.center);
+		let pos_t;
+		diceOBJ.numbers.forEach((objNum, i) => {
+
+			//sinft(0, 1, options.anim.color.h + clock.elapsedTime * options.anim.speed)
+			// if (i == 6 && once) {
+			const start = options.anim.delay / 20 * i
+			const end = start + options.anim.speed
+
+			// let t = curr_time <= start ? start : curr_time >= end ? end : curr_time
+			// t = (t - start) / options.anim.speed
+
+			let tp = (clamp(curr_time, start, end) - start) / options.anim.speed
+			// console.log(start, end, t)
+
+			let t = -Math.PI / 2 + tp * Math.PI * 2
+			const curr_h = sinft(options.anim.color.h, options.anim.color.h_end, t)
+			const curr_s = sinft(options.anim.color.s, options.anim.color.s_end, t)
+
+			objNum.obj.material.color.setHSL(
+				curr_h,
+				options.anim.color.l,
+				curr_s,
+			)
+
+			// }
+			const sub = new Vector3().subVectors(diceOBJ.center, objNum.center);
 			const length = sub.length();
 			const normal = sub.normalize();
+			const normal_fl = normal.clone();
 			// const pl = sinft(0., 1, clock.elapsedTime * 3.0) * length
-			const pl = sinft(0.8, 1, clock.elapsedTime * 3.0 + options.anim.position * i) * length;
-			const new_pos = new Vector3().copy(dice_obj.center).add(normal.multiplyScalar(-pl));
+			// const pl = sinft(0.8, 1, clock.elapsedTime * 3.0 + options.anim.position * i) * length;
 
 
+			let t2 = sinft(0, 1, t)
+			if (options.anim.show_all) t2 = 1
+			const pl = length * (options.anim.position_number + (t2 * 0.1));
+			const new_pos = new Vector3().copy(diceOBJ.center).add(normal.multiplyScalar(-pl));
 
-			obj_num.obj.position.copy(new_pos)
 
-			// vlight.position.copy(new_pos);
-			// vlight.updateMatrixWorld();
+			objNum.obj.position.copy(new_pos)
 
+
+			if (!objNum.light) return
+
+
+			const pl_light = length * options.anim.position_light;
+			const new_pos_light = new Vector3().copy(diceOBJ.center).add(normal_fl.multiplyScalar(-pl_light));
+
+			objNum.light.scale.set(options.anim.radius_small_light, options.anim.radius_small_light, options.anim.radius_small_light)
+			objNum.light.position.copy(new_pos_light);
+			objNum.light.updateMatrixWorld();
 		})
-		const rotateX = delta / sinft(5, 10, clock.elapsedTime) * Math.PI * 2;
-		const rotateY = delta / sinft(5, 7, clock.elapsedTime) * Math.PI * 2;
-		const rotateZ = (delta / 7) * Math.PI * 2;
-
 
 		//_________________________
-
-		let start_radius = options_bloom.radius
-		let b_st = options_bloom.anim_speed
-		let b_adr = options_bloom.anim_d_r * 0.5
-
 		bloomPass.radius = sinft(
-			start_radius - b_adr,
-			start_radius + b_adr,
-			clock.elapsedTime * b_st
+			options_bloom.radius,
+			options_bloom.radius_end,
+			clock.elapsedTime * options_bloom.anim_speed
 		)
 
 		//_________________________
 
 
-		if (options.anim.enableRotation && dice_obj.group) {
-			group_rotate(dice_obj.group, rotateX, rotateY, rotateZ);
-			group_rotate(group_ocl, rotateX, rotateY, rotateZ)
+		if (options.anim.enableRotation && diceOBJ.group) {
+			diceOBJ.rotate(delta, clock.elapsedTime)
 		}
 
 		// renderer.render(scene, camera);
 		// renderer.render(oclscene, camera);
 
+
 		// camera.updateMatrixWorld();
 		if (enable_rays) {
-			var lPos = projectOnScreen(vlight, camera);
+			var lPos = projectOnScreen(diceOBJ.vlight, camera);
 			grPass.uniforms["fX"].value = lPos.x;
 			grPass.uniforms["fY"].value = lPos.y;
-
-
 
 			scene.traverse(darkenNonBloomed);
 			bloomComposer.render();
@@ -747,20 +871,18 @@ const easeInSine = function (x) {
 }
 
 function getCenter(mesh) {
-	var center = new THREE.Vector3();
-	mesh.geometry.computeBoundingBox();
-	mesh.geometry.boundingBox.getCenter(center);
-	mesh.geometry.center();
-	mesh.position.copy(center);
-	return center;
+	mesh.geometry.computeBoundingSphere();
+	return new THREE.Vector3().copy(mesh.geometry.boundingSphere.center);
 }
 
 
 function sinft(from, to, grad) {
-	//10 - 5 + (1 + Math.sin(clock.elapsedTime) * 2))
-	return from + (to - from) * ((1 + Math.sin(grad)) / 2);
+	return from + (to - from) * ((1.0 + Math.sin(grad)) * 0.5);
 }
 
+function cosft(from, to, grad) {
+	return from + (to - from) * ((1 + Math.cos(grad)) * 0.5);
+}
 
 function group_rotate(group, rotateX, rotateY, rotateZ) {
 	group.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), rotateX);
@@ -802,13 +924,25 @@ function projectOnScreen(object, camera) {
 }
 
 //####################
+function shuffle(array) {
+	for (let i = array.length - 1; i > 0; i--) {
+		let j = Math.floor(Math.random() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+}
+
+function mod(f, m = 1) {
+	return f % m;
+}
+const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+//####################
 
 const options_bloom = {
 	exposure: CNum("bloom-exposure", 1),
 	strength: CNum("bloom-strength", 6.3),
-	radius: CNum("bloom-radius", 0.52),
 
-	anim_d_r: CNum("bloom-anim_d_r", 0.34),
+	radius: CNum("bloom-radius", 0.40),
+	radius_end: CNum("bloom-radius_end", 0.60),
 	anim_speed: CNum("bloom-anim_speed", 3.8)
 };
 const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
@@ -840,6 +974,13 @@ var raysParam = {
 };
 
 
+function CJson(key, defVal = {}) {
+	try {
+		return JSON.parse(Cookies.get(key)) || defVal
+	} catch (ex) {
+		return defVal
+	}
+}
 function CStr(key, defVal = null) {
 	return Cookies.get(key) || defVal
 }
@@ -847,8 +988,14 @@ function CNum(key, defVal = null) {
 	return Number(Cookies.get(key) || defVal)
 }
 function CSet(key, val) {
-	Cookies.set(key, val.toString())
-	return Number(val)
+	if (typeof val == 'object') {
+		Cookies.set(key, JSON.stringify(val))
+		return val
+	} else {
+		Cookies.set(key, val.toString())
+		return Number(val)
+	}
+
 }
 window.onload = () => {
 	window.create_anim();
