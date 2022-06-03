@@ -69,6 +69,7 @@ var options = {
 		},
 
 		enableRotation: false,
+		enableTranslateNumber: CGet("anim-enableTranslateNumber", true),
 		show_all: false,
 		position_number: CNum("anim-position_number", -0.09),
 
@@ -300,7 +301,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			meshNumber.material.color.setHSL(numberObj.color.h, numberObj.color.l, numberObj.color.s);
 
 
-			// if (diceOBJ.numbers.length > 1) return
+			if (diceOBJ.numbers.length > 1) return
 			const light = numberObj.light
 			diceOBJ.groupOcl.add(light);
 
@@ -462,12 +463,12 @@ window.create_anim = function (id_block = "canvas-container") {
 				diceOBJ.mesh_dice = obj.getObjectByName("DICE_dice");
 				diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_IN_dice_in");
 
-				// diceOBJ.mesh_diceIn.removeFromParent()
-				// diceOBJ.mesh_diceIn = diceOBJ.mesh_dice.clone()
-				// obj.add(diceOBJ.mesh_diceIn)
+				diceOBJ.mesh_diceIn.removeFromParent()
+				diceOBJ.mesh_diceIn = diceOBJ.mesh_dice.clone()
+				obj.add(diceOBJ.mesh_diceIn)
 				//____________________
-				diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_dice");
-				diceOBJ.mesh_dice = obj.getObjectByName("DICE_IN_dice_in");
+				// diceOBJ.mesh_diceIn = obj.getObjectByName("DICE_dice");
+				// diceOBJ.mesh_dice = obj.getObjectByName("DICE_IN_dice_in");
 				//____________________
 
 				diceOBJ.group.add(obj)
@@ -671,6 +672,9 @@ window.create_anim = function (id_block = "canvas-container") {
 				diceOBJ.resetAngle()
 			});
 
+			anim_gp.add(options.anim, "enableTranslateNumber").onChange((value) => {
+				CSet("anim-enableTranslateNumber", value)
+			});
 			anim_gp.add(options.anim, "show_all").onChange(() => {
 			});
 
@@ -719,7 +723,7 @@ window.create_anim = function (id_block = "canvas-container") {
 		let curr_time = mod(clock.elapsedTime, all_time)
 
 		//resort number
-		if (false) {
+		if (true) {
 			if (curr_time <= 1) { once = true }
 			if (curr_time >= all_time - 0.1 && once) {
 				once = false
@@ -762,6 +766,8 @@ window.create_anim = function (id_block = "canvas-container") {
 
 			let t2 = sinft(0, 1, t)
 			if (options.anim.show_all) t2 = 1
+			if (!options.anim.enableTranslateNumber) t2 = 0
+			
 			const pl = length * (options.anim.position_number + (t2 * 0.1));
 			const new_pos = new Vector3().copy(diceOBJ.center).add(normal.multiplyScalar(-pl));
 
@@ -984,8 +990,25 @@ function CJson(key, defVal = {}) {
 function CStr(key, defVal = null) {
 	return Cookies.get(key) || defVal
 }
+function CGet(key, defVal = null) {
+	return CNum(key, defVal)
+}
+
 function CNum(key, defVal = null) {
+	let type = typeof defVal
+
+
+	if (type == 'boolean') {
+		let t = Cookies.get(key)
+		if (t) return t == 1 ? true : false
+		return defVal
+	}
+	// if (type == 'undefined' ||
+	// 	type == 'number'
+	// )
 	return Number(Cookies.get(key) || defVal)
+
+
 }
 function CSet(key, val) {
 	if (typeof val == 'object') {
