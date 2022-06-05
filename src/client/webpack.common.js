@@ -1,9 +1,15 @@
 const path = require('path');
+const webpack = require('webpack');
 
-
-console.log(__dirname);
+// console.log(__dirname);
 module.exports = {
-    entry: './src/client/main.js',
+    entry: [
+        // "./src/client/saves.js",
+        // "./src/client/helper.js",
+        // "./src/client/vars.js",
+        "./src/client/main.js"],
+
+
     module: {
         rules: [
             {
@@ -45,6 +51,23 @@ module.exports = {
         // clean: true,
 
         filename: 'bundle.js',
+        // filename: '[name].js',
         path: path.resolve(__dirname, './../../public/'),
-    }
+    },
+
+
+    // optimization: {
+    //     runtimeChunk: true
+    //     // splitChunks: {
+    //     //     chunks: 'all',
+    //     // },
+    // },
+
+    // optimization: {
+    //     minimize: true,
+    //     splitChunks: {
+    //         minChunks: Infinity,
+    //         chunks: 'all'
+    //     }
+    // }
 };

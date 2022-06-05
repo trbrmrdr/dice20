@@ -4,74 +4,13 @@ var uglify = require('gulp-uglify');
 var browserSync = require('browser-sync').create();
 const javascriptObfuscator = require('gulp-javascript-obfuscator');
 
-//###################################################################################################################
-var browserify = require("browserify");
-var source = require('vinyl-source-stream');
-var watchify = require("watchify");
-var tsify = require("tsify");
-var gutil = require("gulp-util");
-var paths = {
-    pages: ['public/index.html']
-};
-
-
-var watchedBrowserify = watchify(browserify({
-    basedir: '.',
-    debug: true,
-    entries: ['public/lib/client.ts'],
-    cache: {},
-    packageCache: {}
-}).plugin(tsify));
-
-gulp.task("copy-html", function () {
-    return gulp.src(paths.pages)
-        .pipe(gulp.dest("./public/dist/"));
-});
-
-function bundle() {
-    return watchedBrowserify
-        .bundle()
-        .pipe(source('bundle.js'))
-        .pipe(gulp.dest('./public/dist/'));
-}
-
-gulp.task('default', gulp.series("copy-html",function(done){
-    bundle();
-    done();
-}));
-watchedBrowserify.on("update", bundle);
-watchedBrowserify.on("log", gutil.log);
-/*
-//###################################################################################################################
-
-
-var ts = require("gulp-typescript");
-// var sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('scripts', function () {
     console.log(' task -> scripts')
 
-    var tsProject = ts.createProject("tsconfig.json");
-
-    return tsProject.src()
-        .pipe(ts(tsProject)).js
-        .pipe(concat('main2.js'))
-        .pipe(gulp.dest('./public/dist/'));
-
-    var reporter = ts.reporter.fullReporter();
-    var tsResult = tsProject.src()
-        .pipe(sourcemaps.init())
-        .pipe(tsProject(reporter));
-
-    return tsResult.js
-        .pipe(sourcemaps.write())
-        .pipe(concat('main2.js'))
-        .pipe(gulp.dest('./public/dist/'));
-
     return gulp.src([
-        //   './lib/*.js'// путь к папке со скриптами
-        // "./public/lib/v6.0.0-rc.2/pixi.js",
-        "./public/lib/main2.js",
+        //   './lib/*.js'
+        "./src/main2.js",
         // "./public/lib/pixi-spine/dist/pixi-spine.umd.js",
     ])
 
@@ -142,4 +81,3 @@ gulp.task('release', gulp.series('release_src', function (done) {
     done()
 })
 )
-*/

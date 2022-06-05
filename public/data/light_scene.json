@@ -1,0 +1,143 @@
+{
+	"metadata": {
+		"version": 4.5,
+		"type": "Object",
+		"generator": "Object3D.toJSON"
+	},
+	"geometries": [],
+	"materials": [],
+	"textures": [],
+	"images": [],
+	"object": {
+		"uuid": "4eb2ffa0-7b23-481b-b47f-7c612a6aca6f",
+		"type": "Scene",
+		"name": "Scene",
+		"layers": 1,
+		"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+		"children": [
+			{
+				"uuid": "ad0790c6-dadf-452e-be14-10b7d7c34275",
+				"type": "DirectionalLight",
+				"name": "DirectionalLight",
+				"layers": 1,
+				"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,5.336554405493943,-1.466,2.1981873299353114,1],
+				"color": 15267740,
+				"intensity": 1.06,
+				"shadow": {
+					"camera": {
+						"uuid": "ee2d8df7-7ed5-418b-8470-687eb79bd22e",
+						"type": "OrthographicCamera",
+						"layers": 1,
+						"zoom": 1,
+						"left": -5,
+						"right": 5,
+						"top": 5,
+						"bottom": -5,
+						"near": 0.5,
+						"far": 500
+					}
+				}
+			},
+			{
+				"uuid": "3bba0e9d-b690-45ad-87e9-4994a11f59e8",
+				"type": "DirectionalLight",
+				"name": "DirectionalLight",
+				"layers": 1,
+				"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,-4.658893788173186,1.8090972292284913,2.0501539763871177,1],
+				"color": 12169332,
+				"intensity": 0.6,
+				"shadow": {
+					"camera": {
+						"uuid": "fa9e2ba1-2bad-4dec-86c6-0f6e1857040e",
+						"type": "OrthographicCamera",
+						"layers": 1,
+						"zoom": 1,
+						"left": -5,
+						"right": 5,
+						"top": 5,
+						"bottom": -5,
+						"near": 0.5,
+						"far": 500
+					}
+				}
+			},
+			{
+				"uuid": "d6101bca-6676-4e8e-8bf7-93c271d13ef5",
+				"type": "SpotLight",
+				"name": "SpotLight",
+				"frustumCulled": false,
+				"layers": 1,
+				"matrix": [0.9746124981052967,0.17973751686723766,0.13350993808458633,0,-0.18575570617172416,0.31618987186074765,0.9303326193127532,0,0.12500118464076582,-0.9315140310070931,0.34154987026102324,0,0,0,-5.684039968706548,1],
+				"color": 14867371,
+				"intensity": 0.58,
+				"distance": 0,
+				"angle": 0.334,
+				"decay": 1,
+				"penumbra": 0,
+				"shadow": {
+					"bias": 0.00002,
+					"normalBias": 0.1,
+					"radius": 0.82,
+					"camera": {
+						"uuid": "77f5bd10-f289-4e22-a987-19a7653079b7",
+						"type": "PerspectiveCamera",
+						"layers": 1,
+						"fov": 50,
+						"zoom": 1,
+						"near": 0.5,
+						"far": 500,
+						"focus": 10,
+						"aspect": 1,
+						"filmGauge": 35,
+						"filmOffset": 0
+					}
+				}
+			},
+			{
+				"uuid": "6997b1bc-5c86-432c-9899-667ca890a604",
+				"type": "DirectionalLight",
+				"name": "DirectionalLight",
+				"layers": 1,
+				"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,-4.757463646940955,-0.3812603421468934,-2.9388107786137656,1],
+				"color": 14999942,
+				"intensity": 1.12,
+				"shadow": {
+					"camera": {
+						"uuid": "946caa48-fbcc-44cd-a594-0df63dd73ca5",
+						"type": "OrthographicCamera",
+						"layers": 1,
+						"zoom": 1,
+						"left": -5,
+						"right": 5,
+						"top": 5,
+						"bottom": -5,
+						"near": 0.5,
+						"far": 500
+					}
+				}
+			},
+			{
+				"uuid": "f20fbb0d-26ee-4b46-aaa8-ff3ebcccfc64",
+				"type": "DirectionalLight",
+				"name": "DirectionalLight",
+				"layers": 1,
+				"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,4.762351606662574,1.5261463955366525,-3.4656712447078997,1],
+				"color": 15390587,
+				"intensity": 1.42,
+				"shadow": {
+					"camera": {
+						"uuid": "2e5679cb-7304-46f2-9f94-3b36a15ece95",
+						"type": "OrthographicCamera",
+						"layers": 1,
+						"zoom": 1,
+						"left": -5,
+						"right": 5,
+						"top": 5,
+						"bottom": -5,
+						"near": 0.5,
+						"far": 500
+					}
+				}
+			}]
+	}
+}
