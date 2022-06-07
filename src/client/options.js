@@ -1,3 +1,4 @@
+import { Vector2, Vector3 } from './libs/three.js/build/three.module.js';
 import * as S from './saves.js'
 
 
@@ -58,7 +59,6 @@ var options = {
 		delay: S.Get("anim-delay", 0.27),
 
 
-		grPass: null,
 		setAnimPos: null,
 
 		rays_gp: null,//rays group gui
@@ -70,10 +70,28 @@ var options = {
 
 
 		position_anim: S.Get("anim-position_anim", 1),
+	},
+
+	position: {
+		gp: null,
+
+		px: S.Get('px', -0.027),
+		py: S.Get('py', 1.723),
+		pz: S.Get('pz', 1.927),
+
+		angle: S.Get("position-angle", new Vector3()),
+		sel_num: 1,
+
+		anim_number: false,
+		dur_c:S.Get("tmp-dur_c", 3.0),
+		dur:S.Get("tmp-dur", 3.0),
+
+		dAngle:new Vector3()
+
 	}
 };
 
 // Cookies.remove("anim-color")
 options.anim.color = S.Get("anim-color", options.anim.color)
 
-export{options}
+export { options }

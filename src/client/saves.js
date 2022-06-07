@@ -1,9 +1,23 @@
 import Cookies from 'js-cookie'
+import * as THREE from './libs/three.js/build/three.module.js';
+
 
 export function Get(key, defVal = null) {
 	let type = typeof defVal
 
 	let t = Cookies.get(key)
+
+	if (type?.isVector3 == true) {
+		try {
+			t = JSON.parse(Cookies.get(key))
+			return new Vector3(t.x, t.y, t.z)
+		} catch (ex) {
+			return defVal
+		}
+		return defVal
+	}
+
+
 	if (type == 'boolean') {
 		if (t == "true") return true
 		if (t == "false") return false
@@ -14,7 +28,7 @@ export function Get(key, defVal = null) {
 		return defVal
 	} else if (type == 'object') {
 		try {
-			return JSON.parse(Cookies.get(key)) || defVal
+			return JSON.parse(t) || defVal
 		} catch (ex) {
 			return defVal
 		}
@@ -22,11 +36,13 @@ export function Get(key, defVal = null) {
 	// if (type == 'undefined' ||
 	// 	type == 'number'
 	// )
-	return Number(Cookies.get(key) || defVal)
+	if (t) return Number(Cookies.get(key))
+	return defVal
 }
 
 export function Set(key, val) {
 	let type = typeof val
+
 	if (type == 'object') {
 		Cookies.set(key, JSON.stringify(val))
 		return val

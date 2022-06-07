@@ -1,11 +1,12 @@
 
 import * as THREE from './libs/three.js/build/three.module.js';
 import * as H from './helper.js'
-
+import { Number } from "./Number.js"
 export class Dice {
 
     groupLight = new THREE.Group()
     groupOcl = new THREE.Group()
+    groupNOcl = new THREE.Group()
     group = new THREE.Group()
 
     constructor() {
@@ -71,18 +72,23 @@ export class Dice {
         this.group.add(mesh_dice, mesh_diceIn)
 
         const gmat = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
-        this.groupOcl.add(H.cloneGeometry(mesh_diceIn, gmat));
-        // group_ocl.add(cloneGeometry(mesh_number, gmat));
-
+        this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
     }
 
 
     numbers = []
-    addNumber(meshNumber, options_anim) {
+    setColorNumber() {
+
+    }
+    addNumber(meshNumber, options_anim, obj_n_sector) {
         meshNumber.material = new THREE.MeshBasicMaterial();
+
+        // obj_n_sector.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
+        // this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
 
         const numberObj = {
             obj: meshNumber,
+            sector: obj_n_sector,
             center: H.getCenter(meshNumber),
             color: {
                 h: options_anim.color.h,
@@ -95,17 +101,21 @@ export class Dice {
                 new THREE.MeshBasicMaterial({ color: 0xe486d3 })
             )
         }
-        meshNumber.material.color.setHSL(numberObj.color.h, numberObj.color.l, numberObj.color.s);
-
         this.numbers.push(numberObj);
+
+        meshNumber.material.color.setHSL(numberObj.color.h, numberObj.color.l, numberObj.color.s);
         this.group.add(meshNumber);
 
-        if (this.numbers.length > 1) return
         const light = numberObj.light
-        this.groupOcl.add(light);
-
         light.position.copy(numberObj.center);
-        // diceOBJ.vlight.scale.set(scaleR, scaleR, scaleR)
+
+        this.groupOcl.add(light, obj_n_sector);
+
+
+        if (this.numbers.length > 1) {
+            light.visible = false
+
+        }
     }
 
 
@@ -158,23 +168,18 @@ export class Dice {
     }
 
 
+    old_angle = null
+    rotate(x, y, z) {
+        this.oldEuler = new THREE.Euler(x, y, z)
 
-    rotate(deltaX, deltaY) {
-        // root.rotation.y += deltaX / 100;
-        // root.rotation.x += deltaY / 100;
-        deltaX /= 100
-        deltaY /= 100
-        // console.log(deltaX, deltaY)
-
-        // diceOBJ.group.rotateX(deltaX)
-        // diceOBJ.groupOcl.rotateX(deltaX)
-        H.group_rotate(this.group, deltaX, 0, deltaY);
-        H.group_rotate(this.groupOcl, deltaX, 0, deltaY)
+        // this.group.rotateOnAxis
+        this.group.setRotationFromEuler(this.oldEuler)
+        this.groupOcl.setRotationFromEuler(this.oldEuler)
     }
 
     resetAngle() {
-        this.group.rotation.set(0, 0, 0);
-        this.groupOcl.rotation.set(0, 0, 0);
+        // this.group.rotation.set(0, 0, 0);
+        // this.groupOcl.rotation.set(0, 0, 0);
     }
 
     rotateLight(delta, elapsed) {

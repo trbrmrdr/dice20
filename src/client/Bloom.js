@@ -2,6 +2,7 @@
 import * as THREE from './libs/three.js/build/three.module.js';
 import { UnrealBloomPass } from './libs/three.js/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { EffectComposer } from './libs/three.js/examples/jsm/postprocessing/EffectComposer.js';
+import { options } from './options.js'
 
 const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
 
@@ -33,6 +34,10 @@ export class Bloom {
         this.bloomComposer.addPass(this.bloomPass);
 
         this.texture = this.bloomComposer.renderTarget2.texture
+    }
+
+    updateOptions(){
+        this.setOptions(options.bloom.strength, options.bloom.radius)
     }
 
     setOptions(strength, radius) {

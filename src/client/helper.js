@@ -1,26 +1,36 @@
 
 import * as THREE from './libs/three.js/build/three.module.js';
 
+export const line = (x) => {
+	return x
+}
 export const easeOutQuart = (x) => {
 	// x = x + 0.1
 	return 1 - Math.pow(1 - x, 4);
 }
-export function linftEOQ(from, to, t) {
+export function ft_easeOutQuart(from, to, t) {
 	return from + (to - from) * easeOutQuart(t);
 }
-
 
 export function easeOutCubic(x) {
 	return 1 - Math.pow(1 - x, 3);
 }
 
-export function linftEOC(from, to, t) {
+export function easeInCubic(x) {
+	return x * x * x;
+}
+
+export function ft_easeOutCubic(from, to, t) {
 	return from + (to - from) * easeOutCubic(t);
 }
 
 export const easeOutSine = (x) => {
 	return Math.sin((x * Math.PI) / 2);
 }
+export function easeOutQuad(x) {
+	return 1 - (1 - x) * (1 - x);
+}
+
 export const easeInSine = (x) => {
 	if (x == Infinity || x == -Infinity) return 0;
 	return 1 - Math.cos((x * Math.PI) / 2);
@@ -29,29 +39,60 @@ export const easeInSine = (x) => {
 export function easeInQuart(x) {
 	return x * x * x * x;
 }
+export function easeInQuint(x) {
+	return x * x * x * x * x;
+}
 
-export function linftHalfEOC(from, to, t) {
+
+export function easeInOutSine(x) {
+	return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+
+
+export function ftH_easeInOutSine(from, to, t) {
+	let tv = t * 2
+	if (tv > 1) tv = 2 - tv
+	tv = easeInOutSine(tv);
+	return from + (to - from) * tv;
+}
+
+export function ft_easeInOutSine(from, to, t) {
+	return from + (to - from) * easeInOutSine(t);
+}
+
+export function ftH_easeOutCubic(from, to, t) {
 	let tv = t * 2
 	if (tv > 1) tv = 2 - tv
 	tv = easeOutCubic(tv);
 	return from + (to - from) * tv;
 }
 
-export function linftHalf_EIS_EIQ(from, to, t) {
+
+
+export function ftH_01_easeInQart(from, to, t) {
+	let tv = t * 2
+	if (tv > 1) {
+		tv = 2 - tv
+		tv = easeInQuart(tv);
+	}
+	return from + (to - from) * tv;
+}
+
+export function ftH_01_easeInSine(from, to, t) {
 	let tv = t * 2
 	if (tv > 1) {
 		tv = 2 - tv
 		tv = easeInSine(tv);
-	}else{
-		tv = easeInSine(tv);
 	}
-	
 	return from + (to - from) * tv;
 }
 
-export function linftHalf(from, to, t) {
+export function ftHalf(from, to, t, f1 = line, f2 = line) {
 	let tv = t * 2
-	if (tv > 1) tv = 2 - tv
+	if (tv <= 1)
+		tv = f1(tv)
+	else
+		tv = f2(2 - tv)
 	return from + (to - from) * tv;
 }
 

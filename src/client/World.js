@@ -21,6 +21,8 @@ export class World {
         this.div_canvas.addEventListener('pointermove', (evt) => { this.onPointerMove(evt) });
         this.div_canvas.addEventListener('pointerdown', (evt) => { this.onPointerDown(evt) });
         this.div_canvas.addEventListener('pointerup', (evt) => { this.onPointerUp(evt) });
+        window.addEventListener('keydown', (evt) => { this.onKey(evt, true) });
+        window.addEventListener('keyup', (evt) => { this.onKey(evt, false) });
 
         //____________________________
         this.renderer = new THREE.WebGLRenderer({
@@ -64,7 +66,7 @@ export class World {
         this.canvasSize = { width: new_width, height: new_height };
 
 
-        console.log(new_width, new_height)
+        // console.log(new_width, new_height)
 
         this.renderer.setSize(new_width, new_height);
 
@@ -78,10 +80,18 @@ export class World {
     }
 
 
-    mouseDown = false
+    mouseDown = -1
+    hasShift = false
     mouseX = 0
     mouseY = 0
     mouse = new THREE.Vector2()
+
+    onKey(evt, down) {
+        if (evt.key == 'Shift') {
+            this.hasShift = down
+        }
+    }
+
     onPointerDown(evt) {
         evt.preventDefault();
 
@@ -95,48 +105,55 @@ export class World {
         // 	mBloomObj.enable(object)
         // }
 
-        this.mouseDown = evt.button == 0;
+        if (evt.button == 0) {
+            this.mouseDown = 1;
+        }
         this.mouseX = evt.clientX;
         this.mouseY = evt.clientY;
     }
 
-    rotateScene = (x, y) => { }
+    dragMouse = (dx, dy, dz) => { }
     onPointerMove(evt) {
-        if (!this.mouseDown) return
+        if (this.mouseDown <= 0) return
+
         evt.preventDefault();
 
         var deltaX = evt.clientX - this.mouseX,
             deltaY = evt.clientY - this.mouseY;
         this.mouseX = evt.clientX;
         this.mouseY = evt.clientY;
-        this.rotateScene(deltaX, deltaY);
+        if (this.hasShift && this.mouseDown == 1) {
+            this.dragMouse(0, 0, deltaX);
+        }
+        else if (this.mouseDown == 1) {
+            this.dragMouse(deltaX, deltaY, 0);
+        }
     }
 
     onPointerUp(evt) {
         evt.preventDefault();
-        this.mouseDown = false;
+        this.mouseDown = -1;
+        console.log("up", evt.button)
     }
 
-    createControl() {
+    controls = null
+    controllChange = (camera) => { }
+    setPosCamera(op) {
 
         // const grid = new THREE.GridHelper(100, 100, 0x000000, 0x000000);
         // scene.add(grid);
 
-        this.camera.position.set(
-            S.Get('px', -0.027),
-            S.Get('py', 1.723),
-            S.Get('pz', 1.927));
+        this.camera.position.set(op.px, op.py, op.pz);
         // camera.position.set(-0.06, 3.721, 4.16);
 
         //____________________________
-        const controls = new OrbitControls(this.camera, this.renderer.domElement);
-        controls.enableRotate = false;
-        controls.update();
+        if (this.controls) return
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableRotate = false;
+        this.controls.update();
 
-        controls.addEventListener('change', () => {
-            S.Set('px', this.camera.position.x);
-            S.Set('py', this.camera.position.y);
-            S.Set('pz', this.camera.position.z);
+        this.controls.addEventListener('change', () => {
+            this.controllChange(this.camera)
         });
     }
 }
