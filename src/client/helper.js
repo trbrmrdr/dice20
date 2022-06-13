@@ -8,9 +8,6 @@ export const easeOutQuart = (x) => {
 	// x = x + 0.1
 	return 1 - Math.pow(1 - x, 4);
 }
-export function ft_easeOutQuart(from, to, t) {
-	return from + (to - from) * easeOutQuart(t);
-}
 
 export function easeOutCubic(x) {
 	return 1 - Math.pow(1 - x, 3);
@@ -20,13 +17,10 @@ export function easeInCubic(x) {
 	return x * x * x;
 }
 
-export function ft_easeOutCubic(from, to, t) {
-	return from + (to - from) * easeOutCubic(t);
-}
-
 export const easeOutSine = (x) => {
 	return Math.sin((x * Math.PI) / 2);
 }
+
 export function easeOutQuad(x) {
 	return 1 - (1 - x) * (1 - x);
 }
@@ -39,13 +33,50 @@ export const easeInSine = (x) => {
 export function easeInQuart(x) {
 	return x * x * x * x;
 }
+
 export function easeInQuint(x) {
 	return x * x * x * x * x;
 }
 
-
 export function easeInOutSine(x) {
 	return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+
+export function easeOutCirc(x) {
+	return Math.sqrt(1 - Math.pow(x - 1, 2));
+}
+
+export function easeOutElastic(x) {
+	const c4 = (2 * Math.PI) / 3;
+
+	return x === 0
+		? 0
+		: x === 1
+			? 1
+			: Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
+}
+
+
+export function easeOutBounce(x) {
+	const n1 = 7.5625;
+	const d1 = 2.75;
+
+	if (x < 1 / d1) {
+		return n1 * x * x;
+	} else if (x < 2 / d1) {
+		return n1 * (x -= 1.5 / d1) * x + 0.75;
+	} else if (x < 2.5 / d1) {
+		return n1 * (x -= 2.25 / d1) * x + 0.9375;
+	} else {
+		return n1 * (x -= 2.625 / d1) * x + 0.984375;
+	}
+}
+
+export function easeOutBack(x) {
+	const c1 = 1.70158;
+	const c3 = c1 + 1;
+
+	return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 }
 
 
@@ -53,37 +84,6 @@ export function ftH_easeInOutSine(from, to, t) {
 	let tv = t * 2
 	if (tv > 1) tv = 2 - tv
 	tv = easeInOutSine(tv);
-	return from + (to - from) * tv;
-}
-
-export function ft_easeInOutSine(from, to, t) {
-	return from + (to - from) * easeInOutSine(t);
-}
-
-export function ftH_easeOutCubic(from, to, t) {
-	let tv = t * 2
-	if (tv > 1) tv = 2 - tv
-	tv = easeOutCubic(tv);
-	return from + (to - from) * tv;
-}
-
-
-
-export function ftH_01_easeInQart(from, to, t) {
-	let tv = t * 2
-	if (tv > 1) {
-		tv = 2 - tv
-		tv = easeInQuart(tv);
-	}
-	return from + (to - from) * tv;
-}
-
-export function ftH_01_easeInSine(from, to, t) {
-	let tv = t * 2
-	if (tv > 1) {
-		tv = 2 - tv
-		tv = easeInSine(tv);
-	}
 	return from + (to - from) * tv;
 }
 
@@ -103,6 +103,11 @@ export function bordft(from, to, t) {
 	// console.log(t)
 	return t;
 }
+
+export function ft(from, to, t, func = line) {
+	return from + (to - from) * func(t);
+}
+
 export function linft(from, to, t) {
 	return from + (to - from) * t;
 }
@@ -166,3 +171,45 @@ export function mod(f, m = 1) {
 }
 
 export const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+
+
+
+export function Vecor3Copy(vector3, modV = null) {
+	let ret = new THREE.Vector3(vector3.x, vector3.y, vector3.z)
+	if (modV) {
+		ret.x = mod(ret.x, modV)
+		ret.y = mod(ret.y, modV)
+		ret.z = mod(ret.z, modV)
+	}
+	return ret
+}
+
+export const PI2 = Math.PI * 2
+export const dE = 0.01
+export function rotateFTP(from, to, pc, dRadCicle = PI2) {
+	from += Math.PI
+	to += Math.PI
+
+	if (from >= to - dE) {
+		from = mod(from, PI2)
+		to = to + PI2
+	}
+
+	/* if (to <= from && to + Math.PI / 2 >= from) {
+		let tmp = to
+		to = from
+		from = tmp
+		console.log(`${from} ${to}`)
+	} */
+
+	// if (to - from < Math.PI) {
+	// 	dRadCicle = PI2
+	// }
+
+	let ret = ft(from, to + dRadCicle, pc)
+	ret = mod(ret, PI2)
+	return ret - Math.PI
+}
+
+
+

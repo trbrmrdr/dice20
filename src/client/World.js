@@ -10,8 +10,7 @@ var CANVAS_SIZE = {
 
 export class World {
 
-    constructor(cs) {
-        CANVAS_SIZE = cs
+    constructor() {
     }
 
     createRenderer(div) {
@@ -133,7 +132,6 @@ export class World {
     onPointerUp(evt) {
         evt.preventDefault();
         this.mouseDown = -1;
-        console.log("up", evt.button)
     }
 
     controls = null

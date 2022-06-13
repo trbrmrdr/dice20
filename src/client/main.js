@@ -32,46 +32,13 @@ const gui = new GUI();
 // const gui = null;
 
 //_______________________________________________________________
-const CANVAS_SIZE = {
-	width: 1024,
-	height: 1024,
-}
-
-
 const mBloomObj = new Bloom();
 const mGoodRay = new GoodRay();
 
-const mWorld = new World(CANVAS_SIZE);
-const mDiceObj = new Dice();
+const mWorld = new World();
+const mDice = new Dice();
 
 const clock = new THREE.Clock();
-
-const _rotate_pos = (save = false, dx = null, dy = null, dz = null) => {
-
-	if (dx != null || dy != null) {
-
-		if (_subF) {
-			options.position.dAngle.x += dx
-			options.position.dAngle.y += dy
-			options.position.dAngle.z += dz
-			_update_number()
-			return
-		} else {
-			options.position.angle.x += dx
-			options.position.angle.y += dy
-			options.position.angle.z += dz
-		}
-	}
-
-	mDiceObj.rotate(
-		options.position.angle.x,
-		options.position.angle.y,
-		options.position.angle.z)
-	options.position.gp?.updateDisplay()
-	if (save) {
-		S.Set("position-angle", options.position.angle)
-	}
-}
 
 const _camera_pos = (save = false) => {
 	mWorld.setPosCamera(options.position);
@@ -83,76 +50,16 @@ const _camera_pos = (save = false) => {
 	}
 }
 
-var _subF = null
-var _dAngle_gp //not null
-var _sel_num = 0
-
-const _createDAngleF = () => {
-	if (_subF) {
-		_dAngle_gp.removeFolder(_subF)
-		_subF = null
-	}
-	if (_sel_num <= 1) return
-
-	_subF = _dAngle_gp.addFolder("angle")
-
-	_subF.add(options.position.dAngle, "x", -Math.PI, Math.PI, 0.01).onChange((value) => {
-		_update_number()
-	})
-	_subF.add(options.position.dAngle, "y", -Math.PI, Math.PI, 0.01).onChange((value) => {
-		_update_number()
-	})
-	_subF.add(options.position.dAngle, "z", -Math.PI, Math.PI, 0.01).onChange((value) => {
-		_update_number()
-	})
-
-	_subF.open()
-}
-
-
-var _from_ange, _to_angle
-const _update_number = (read = false) => {
-	if (_sel_num <= 1) {
-		_createDAngleF()
-		_rotate_pos();
-		return
-	}
-
-	let dAngle = options.position.dAngle
-	let name = `pos-dn_${_sel_num}`
-	if (read) {
-		dAngle = S.Get(name, new Vector3())
-		options.position.dAngle = dAngle
-		_createDAngleF()
-		if (options.position.anim_number) {
-			_to_angle = new THREE.Euler(dAngle.x, dAngle.y, dAngle.z)
-			_from_ange = mDiceObj.oldEuler
-			return
-		}
-	} else {
-		dAngle = S.Set(name, dAngle)
-	}
-
-	mDiceObj.rotate(
-		dAngle.x,
-		dAngle.y,
-		dAngle.z)
-	_subF?.updateDisplay()
-}
-
 window.create_anim = function (id_block = "canvas-container") {
 
 	const { renderer, camera } = mWorld.createRenderer(document.getElementById(id_block));
 
 	mWorld.dragMouse = (dx, dy, dz) => {
-
 		dx /= 100
 		dy /= 100
 		dz /= 100
-
-		_rotate_pos(true, -dy, dx, dz)
+		mDice.changeRotate(dy, dx, dz)
 	}
-	_rotate_pos();
 
 	mWorld.controllChange = (camera) => {
 		options.position.px = S.Set('px', camera.position.x);
@@ -168,14 +75,14 @@ window.create_anim = function (id_block = "canvas-container") {
 	scene.background = new THREE.Color(options.global.background);
 	// scene.background = null;
 
-	scene.add(mDiceObj.groupLight)
-	scene.add(mDiceObj.group);
+	scene.add(mDice.groupLight)
+	scene.add(mDice.group);
 
 	//____________________________
-	mDiceObj.loadTexture()
+	mDice.loadTexture()
 
 	const sceneOCL = new THREE.Scene();
-	sceneOCL.add(mDiceObj.groupOcl);
+	sceneOCL.add(mDice.groupOcl);
 
 	//______________________________________________________________
 	const renderModel = new RenderPass(scene, camera);
@@ -192,7 +99,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 
 	mWorld.windowResizeCb = (w, h) => {
-		console.log("resize callback")
+		// console.log("resize callback")
 
 		mBloomObj.resize(w, h)
 
@@ -204,7 +111,7 @@ window.create_anim = function (id_block = "canvas-container") {
 	new ObjectLoader().load("data/light_scene.json",
 		function (obj) {
 			if (obj.parent) return
-			mDiceObj.initLight(obj.children, options.light)
+			mDice.initLight(obj.children, options.light)
 			load_two();
 		}
 	);
@@ -227,7 +134,7 @@ window.create_anim = function (id_block = "canvas-container") {
 				// var mesh_dice = obj.getObjectByName("DICE_IN_dice_in");
 				//____________________
 
-				mDiceObj.initDice(mesh_dice, options.dice, mesh_diceIn, options.diceIn)
+				mDice.initDice(mesh_dice, options.dice, mesh_diceIn, options.diceIn)
 
 				for (let i = 1; i <= 20; ++i) {
 					let ni = (i < 10 ? '0' : '') + i
@@ -236,10 +143,10 @@ window.create_anim = function (id_block = "canvas-container") {
 					let obj_n_sector = obj.getObjectByName(`DICE_IN_${ni}`)
 					mBloomObj.enable(obj_number)
 
-					mDiceObj.addNumber(obj_number, options.anim, obj_n_sector)
+					mDice.addNumber(obj_number, options.anim, obj_n_sector)
 				}
 
-				mDiceObj.initGodLight()
+				mDice.initGodLight()
 
 				setupGUIConfigs()
 			},
@@ -251,36 +158,23 @@ window.create_anim = function (id_block = "canvas-container") {
 			});
 	};
 
-	var once = true
-	var start_time_rot = -1;
-	var end_time_rot = -1;
+
+	function _in() {
+		mDice.startIn(clock.elapsedTime)
+	}
+
+	function _processed() {
+		mDice.processed(clock.elapsedTime)
+	}
+
+	function _out() {
+		mDice.startOut(clock.elapsedTime)
+	}
+
 	function draw() {
 		const delta = clock.getDelta();
 		//_____________________
-		if (start_time_rot == -1 && _from_ange != null) {
-			start_time_rot = clock.elapsedTime
-			end_time_rot = start_time_rot + options.position.dur
-		}
-
-		if (clock.elapsedTime <= end_time_rot) {
-			let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
-
-			let euler = new THREE.Euler(
-				_to_angle.x - _from_ange.x,
-				_to_angle.y - _from_ange.y,
-				_to_angle.z - _from_ange.z)
-
-
-			mDiceObj.rotate(
-				_to_angle.x - euler.x * (percent * options.position.dur_c),
-				_to_angle.y - euler.y * (percent * options.position.dur_c),
-				_to_angle.z - euler.z * (percent * options.position.dur_c),
-			)
-		} else {
-			start_time_rot = -1
-			_from_ange = null
-			_to_angle = null
-		}
+		mDice.updateRotation(clock.elapsedTime)
 		//______________________
 
 		let all_time = options.anim.delay + options.anim.speed
@@ -304,7 +198,7 @@ window.create_anim = function (id_block = "canvas-container") {
 		// }
 
 
-		mDiceObj.numbers.forEach((objNum, i) => {
+		mDice.numbers.forEach((objNum, i) => {
 			const start = options.anim.delay / 20 * i
 			const end = start + options.anim.speed
 			let tp = (H.clamp(curr_time, start, end) - start) / options.anim.speed
@@ -312,7 +206,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 
 
-			mDiceObj.setColorNumber(objNum, tp)
+			mDice.setColorNumber(objNum, tp)
 			const curr_h = H.ftH_easeInOutSine(options.anim.color.h, options.anim.color.h_end, tp)
 			const curr_s = H.ftH_easeInOutSine(options.anim.color.s, options.anim.color.s_end, tp)
 			objNum.obj.material.color.setHSL(
@@ -322,7 +216,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			)
 
 			// }
-			const sub = new Vector3().subVectors(mDiceObj.center, objNum.center);
+			const sub = new Vector3().subVectors(mDice.center, objNum.center);
 			const length = sub.length();
 			const normal = sub.normalize();
 			const normal_fl = normal.clone();
@@ -333,22 +227,22 @@ window.create_anim = function (id_block = "canvas-container") {
 			// let t2 = H.sinft(0, 1, t)
 			let t2 = H.ftH_easeInOutSine(0, 1, tp)
 			if (options.anim.show_all) t2 = 1
-			if (!options.anim.enableTranslateNumber) t2 = 0
+			if (!options.anim.translateNumber) t2 = 0
 
 			const pl = length * (options.anim.position_number + (t2 * 0.1));
-			const new_pos = new Vector3().copy(mDiceObj.center).add(normal.multiplyScalar(-pl));
+			const new_pos = new Vector3().copy(mDice.center).add(normal.multiplyScalar(-pl));
 
 			objNum.obj.position.copy(new_pos)
 
 			objNum.sector.visible = i != 0
 
 
-			if (i != 0) return
+			// if (i ! = 0) return
 			const pl_light = length * options.anim.position_light;
 
 			// const pl_light = length * linft(0.6, 1.42, options.anim.position_anim);
 
-			const new_pos_light = new Vector3().copy(mDiceObj.center).add(normal_fl.multiplyScalar(-pl_light));
+			const new_pos_light = new Vector3().copy(mDice.center).add(normal_fl.multiplyScalar(-pl_light));
 
 			objNum.light.scale.set(options.anim.radius_small_light, options.anim.radius_small_light, options.anim.radius_small_light)
 			objNum.light.position.copy(new_pos_light);
@@ -373,8 +267,8 @@ window.create_anim = function (id_block = "canvas-container") {
 		//_________________________
 
 
-		if (options.anim.enableRotation && mDiceObj.group) {
-			mDiceObj.rotateLight(delta * 0.25, clock.elapsedTime)
+		if (options.anim.rotateLight) {
+			mDice.rotateLight(delta * 0.25, clock.elapsedTime)
 		}
 
 		// renderer.render(scene, camera);
@@ -383,7 +277,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 		camera.updateMatrixWorld();
 		if (enable_rays) {
-			var lPos = H.projectOnScreen(mDiceObj.vlight, camera);
+			var lPos = H.projectOnScreen(mDice.vlight, camera);
 			mGoodRay.grPass.uniforms["fX"].value = lPos.x;
 			mGoodRay.grPass.uniforms["fY"].value = lPos.y;
 
@@ -406,14 +300,15 @@ window.create_anim = function (id_block = "canvas-container") {
 
 
 	function setAnimPos(value) {
+		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
-		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeInOutSine)
-		setRadiusMainGLight(H.ftH_easeOutCubic(0.5, 2.26, value))
+		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
 
-		options.anim.radius_small_light = H.ftHalf(0.0, 1.5, value, H.easeInQuint, H.easeInQuart)
-		options.anim.position_light = H.ft_easeInOutSine(0.6, 1.82, value)
-		// options.anim.radius_small_light = H.linftEOC(0.0, 0.93, value)
-		// options.anim.position_light = H.linftHalf_EIS_EIQ(0.6, 1.12, value)
+		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
+
+		options.anim.radius_small_light = H.ftHalf(0.0, 0.68, value, H.easeInQuint, () => 1)
+		options.anim.position_light = H.ft(0.6, 1.25, value, H.easeInOutSine)
+
 
 		options.anim.rays_gp.updateDisplay()
 
@@ -425,7 +320,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 	function setRadiusMainGLight(scaleR) {
 		options.anim.raduis_main = scaleR
-		mDiceObj.initGodLight(scaleR)
+		mDice.initGodLight(scaleR)
 	}
 
 	function setupGUIConfigs() {
@@ -454,14 +349,14 @@ window.create_anim = function (id_block = "canvas-container") {
 			golor_gp.add(options.light, "dir", 0, 10, 0.01).onChange(function (value) {
 				S.Set("dir", value)
 
-				mDiceObj.dirLights.forEach((obj) => {
+				mDice.dirLights.forEach((obj) => {
 					obj.intensity = value;
 				})
 			});
 
 			golor_gp.addColor(options.light, "dirColor").onChange(function (color) {
 				S.Get("dirColor", color)
-				mDiceObj.dirLights.forEach((obj) => {
+				mDice.dirLights.forEach((obj) => {
 					obj.color.set(color);
 				})
 			});
@@ -469,7 +364,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			golor_gp.add(options.light, "spot", 0, 20, 0.01).onChange(function (value) {
 				S.Set("spot", value)
 
-				mDiceObj.spotLights.forEach((obj) => {
+				mDice.spotLights.forEach((obj) => {
 					obj.intensity = value;
 				})
 			});
@@ -477,7 +372,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			golor_gp.addColor(options.light, "spotColor").onChange(function (color) {
 				S.Set("spotColor", color)
 
-				mDiceObj.spotLights.forEach((obj) => {
+				mDice.spotLights.forEach((obj) => {
 					obj.color.set(color);
 				})
 			});
@@ -488,22 +383,22 @@ window.create_anim = function (id_block = "canvas-container") {
 			let dice_in_gp = gui.addFolder("dice in");
 
 			dice_in_gp.addColor(options.diceIn, "color").onChange((value) => {
-				mDiceObj.mesh_diceIn.material.color.set(S.Set("'diceIn-color", value))
+				mDice.mesh_diceIn.material.color.set(S.Set("'diceIn-color", value))
 			});
 
 			dice_in_gp.add(options.diceIn, "roughness", 0, 1, 0.01).onChange((value) => {
-				mDiceObj.mesh_diceIn.material.roughness = S.Set("diceIn-roughness", value)
+				mDice.mesh_diceIn.material.roughness = S.Set("diceIn-roughness", value)
 			});
 			dice_in_gp.add(options.diceIn, "metalness", 0, 1, 0.01).onChange((value) => {
-				mDiceObj.mesh_diceIn.material.metalness = S.Set("diceIn-metalness", value)
+				mDice.mesh_diceIn.material.metalness = S.Set("diceIn-metalness", value)
 			});
 			dice_in_gp.add(options.diceIn, "bumpScale", 0, 3, 0.01).onChange((value) => {
-				mDiceObj.mesh_diceIn.material.bumpScale = S.Set("diceIn-bumpScale", value)
+				mDice.mesh_diceIn.material.bumpScale = S.Set("diceIn-bumpScale", value)
 			});
 
 			dice_in_gp.add(options.diceIn, "scale", 0, 2, 0.01).onChange((value) => {
 				let scale = S.Set("diceIn-scale", value)
-				mDiceObj.mesh_diceIn.scale.set(scale, scale, scale)
+				mDice.mesh_diceIn.scale.set(scale, scale, scale)
 			});
 			// dice_in_gp.open();
 		}
@@ -512,16 +407,16 @@ window.create_anim = function (id_block = "canvas-container") {
 			let dice_gp = gui.addFolder("Dice");
 
 			dice_gp.add(options.dice, "reflectivity", 0, 1, 0.01).onChange((value) => {
-				mDiceObj.mesh_dice.material.reflectivity = S.Set("dice-reflectivity", value)
+				mDice.mesh_dice.material.reflectivity = S.Set("dice-reflectivity", value)
 			});
 			dice_gp.add(options.dice, "roughness", 0, 1, 0.01).onChange((value) => {
-				mDiceObj.mesh_dice.material.roughness = S.Set("dice-roughness", value)
+				mDice.mesh_dice.material.roughness = S.Set("dice-roughness", value)
 			});
 			dice_gp.add(options.dice, "transmission", 0, 1, 0.01).onChange((value) => {
-				mDiceObj.mesh_dice.material.transmission = S.Set("dice-transmission", value)
+				mDice.mesh_dice.material.transmission = S.Set("dice-transmission", value)
 			});
 			dice_gp.add(options.dice, "thickness", 0, 4, 0.01).onChange((value) => {
-				mDiceObj.mesh_dice.material.thickness = S.Set("dice-thickness", value)
+				mDice.mesh_dice.material.thickness = S.Set("dice-thickness", value)
 			});
 
 
@@ -531,20 +426,20 @@ window.create_anim = function (id_block = "canvas-container") {
 
 				switch (value) {
 					case "none":
-						mDiceObj.mesh_dice.material.bumpMap = null
+						mDice.mesh_dice.material.bumpMap = null
 						break;
 					case "type_1":
-						mDiceObj.mesh_dice.material.bumpMap = mDiceObj.dice_bump
+						mDice.mesh_dice.material.bumpMap = mDice.dice_bump
 						break;
 					case "type_2":
-						mDiceObj.mesh_dice.material.bumpMap = mDiceObj.dice_bump_in
+						mDice.mesh_dice.material.bumpMap = mDice.dice_bump_in
 						break;
 				}
 
-				mDiceObj.mesh_dice.material.needsUpdate = true;
+				mDice.mesh_dice.material.needsUpdate = true;
 			});
 			dice_gp.add(options.dice, "bumpScale", 0, 3, 0.01).onChange((value) => {
-				mDiceObj.mesh_dice.material.bumpScale = S.Set("dice-bumpScale", value)
+				mDice.mesh_dice.material.bumpScale = S.Set("dice-bumpScale", value)
 			});
 
 		}
@@ -586,7 +481,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			// folder.open();
 		}
 		//_______________
-		//Anim
+		//Anim color HLS 
 		if (true) {
 			const anim_c_hls_gp = gui.addFolder('Anim_color_hls');
 
@@ -599,18 +494,18 @@ window.create_anim = function (id_block = "canvas-container") {
 			anim_c_hls_gp.add(options.anim.color, "s", 0, 1, 0.01).onChange(save_anim_json)
 			anim_c_hls_gp.add(options.anim.color, "s_end", 0, 1, 0.01).onChange(save_anim_json)
 			// anim_c_hls_gp.open()
-
+		}
+		//Anim
+		if (true) {
 			const anim_gp = gui.addFolder('Anim');
 			anim_gp.add(options.anim, "enableColor").onChange((value) => {
 				S.Set("anim-enableColor", value)
 			})
-			anim_gp.add(options.anim, "enableRotation").onChange((value) => {
-				mDiceObj.resetAngle()
-				S.Set("anim-enableColor", value)
+			anim_gp.add(options.anim, "translateNumber").onChange((value) => {
+				S.Set("anim-translateNumber", value)
 			});
-
-			anim_gp.add(options.anim, "enableTranslateNumber").onChange((value) => {
-				S.Set("anim-enableTranslateNumber", value)
+			anim_gp.add(options.anim, "rotateLight").onChange((value) => {
+				S.Set("anim-rotateLight", value)
 			});
 			anim_gp.add(options.anim, "show_all").onChange(() => {
 			});
@@ -653,20 +548,10 @@ window.create_anim = function (id_block = "canvas-container") {
 		//_________________
 		//position
 		if (true) {
-			const position_gp = gui.addFolder("Position")
+			const position_gp = gui.addFolder("Position number + anim")
 			options.position.gp = position_gp
 
-			position_gp.add(options.position.angle, "x", -Math.PI, Math.PI, 0.01).onChange((value) => {
-				_rotate_pos(true)
-			})
-			position_gp.add(options.position.angle, "y", -Math.PI, Math.PI, 0.01).onChange((value) => {
-				_rotate_pos(true)
-			})
-			position_gp.add(options.position.angle, "z", -Math.PI, Math.PI, 0.01).onChange((value) => {
-				_rotate_pos(true)
-			})
-
-			position_gp.add(options.position, "px", -5, 5, 0.01).onChange((value) => {
+			/* position_gp.add(options.position, "px", -5, 5, 0.01).onChange((value) => {
 				_camera_pos(true)
 			})
 			position_gp.add(options.position, "py", -5, 5, 0.01).onChange((value) => {
@@ -674,35 +559,80 @@ window.create_anim = function (id_block = "canvas-container") {
 			})
 			position_gp.add(options.position, "pz", -5, 5, 0.01).onChange((value) => {
 				_camera_pos(true)
-			})
+			}) */
 
 
-			_dAngle_gp = gui.addFolder("d angle")
-			_dAngle_gp.open()
-
-
-			options.position.set_number = () => { }
 
 			position_gp.add(options.position, "sel_num", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]).onChange((value) => {
-				_sel_num = Number(value)
-				_update_number(true)
+				mDice._sel_num = Number(value)
+				mDice.update_number(true, true)
 			});
 
 			position_gp.add(options.position, "anim_number").onChange((value) => {
-				_update_number(true)
+				mDice.update_number(true)
+			})
+			position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
+
+				if (options.position.anim_number && mDice.to_angle) {
+					// let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
+					let percent = options.position.anim_percent
+
+					mDice.animRotate(percent)
+				}
 			})
 
+			/* 	position_gp.add(options.position, "dur_c", 0, 5, 0.01).onChange((value) => {
+					S.Get("tmp-dur_c", value)
+				})
+	
+				position_gp.add(options.position, "dur", 0, 5, 0.01).onChange((value) => {
+					S.Get("tmp-dur", value)
+				}) */
 
-			position_gp.add(options.position, "dur_c", 0, 5, 0.01).onChange((value) => {
-				S.Get("tmp-dur_c", value)
+
+			// options.position.tmp_rad = 0
+			// options.position.tmp_grad = 0
+			// position_gp.add(options.position, "tmp_rad",0, 10, 0.01).onChange((value) => {
+			// 	options.position.tmp_grad = H.mod(value, 2)/2
+			// 	position_gp.updateDisplay()
+			// })
+
+			// position_gp.add(options.position, "tmp_grad", -360, 360, 0.01)
+
+			mDice.initGui(position_gp.addFolder("d angle"))
+
+			// position_gp.open()
+		}
+
+		if (true) {
+			const _gp = gui.addFolder("Rotating")
+			options.rotating.gp = _gp
+
+
+			options.rotating.in = _in
+			options.rotating.processed = _processed
+			options.rotating.out = _out
+
+			_gp.add(options.rotating, "toNum", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]).onChange((value) => {
+				S.Set("rotating-toNum", value)
+				options.rotating.toNum = Number(value)
+			});
+
+			_gp.add(options.rotating, "in")
+			_gp.add(options.rotating, "processed")
+			_gp.add(options.rotating, "out")
+
+			_gp.add(options.rotating, "durationIn", 0, 10, 0.01).onChange((value) => {
+				S.Set("rotating-durationIn", value)
 			})
-
-			position_gp.add(options.position, "dur", 0, 5, 0.01).onChange((value) => {
-				S.Get("tmp-dur", value)
+			_gp.add(options.rotating, "durationPrc", 0, 10, 0.01).onChange((value) => {
+				S.Set("rotating-durationPrc", value)
 			})
+			_gp.add(options.rotating, "durationOut", 0, 20, 0.01).onChange((value) => {
+				S.Set("rotating-durationOut", value)
+			})
+			// _gp.open()
 
-
-			position_gp.open()
 		}
 		startDraw();
 

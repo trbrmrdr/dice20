@@ -1,9 +1,12 @@
 import Cookies from 'js-cookie'
 import * as THREE from './libs/three.js/build/three.module.js';
 
-
+export function GetV3(key, defVal = new THREE.Vector3()) {
+	return Get(key, defVal)
+}
 export function Get(key, defVal = null) {
 	let type = typeof defVal
+
 
 	let t = Cookies.get(key)
 
@@ -14,7 +17,6 @@ export function Get(key, defVal = null) {
 		} catch (ex) {
 			return defVal
 		}
-		return defVal
 	}
 
 

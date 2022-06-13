@@ -7,6 +7,9 @@ module.exports = merge(common, {
     mode: 'development',
     devtool: 'eval-source-map',
     devServer: {
+        // host: '192.168.68.100',
+        // port: 8080,
+        // disableHostCheck:true,
         static: {
             directory: path.join(__dirname, '/../../public'),
         },
