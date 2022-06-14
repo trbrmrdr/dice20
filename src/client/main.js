@@ -40,16 +40,6 @@ const mDice = new Dice();
 
 const clock = new THREE.Clock();
 
-const _camera_pos = (save = false) => {
-	mWorld.setPosCamera(options.position);
-	options.position.gp?.updateDisplay()
-	if (save) {
-		S.Set("px", options.position.px)
-		S.Set("py", options.position.py)
-		S.Set("py", options.position.pz)
-	}
-}
-
 window.create_anim = function (id_block = "canvas-container") {
 
 	const { renderer, camera } = mWorld.createRenderer(document.getElementById(id_block));
@@ -60,14 +50,7 @@ window.create_anim = function (id_block = "canvas-container") {
 		dz /= 100
 		mDice.changeRotate(dy, dx, dz)
 	}
-
-	mWorld.controllChange = (camera) => {
-		options.position.px = S.Set('px', camera.position.x);
-		options.position.py = S.Set('py', camera.position.y);
-		options.position.pz = S.Set('pz', camera.position.z);
-		_camera_pos(true)
-	}
-	_camera_pos()
+	mWorld.setUpCamera()
 
 	//____________________________
 	const scene = new THREE.Scene();
@@ -143,7 +126,7 @@ window.create_anim = function (id_block = "canvas-container") {
 					let obj_n_sector = obj.getObjectByName(`DICE_IN_${ni}`)
 					mBloomObj.enable(obj_number)
 
-					mDice.addNumber(obj_number, options.anim, obj_n_sector)
+					mDice.addNumber(i, obj_number, obj_n_sector)
 				}
 
 				mDice.initGodLight()
@@ -174,90 +157,63 @@ window.create_anim = function (id_block = "canvas-container") {
 	function draw() {
 		const delta = clock.getDelta();
 		//_____________________
-		mDice.updateRotation(clock.elapsedTime)
+		let pc_anim = mDice.updateRotation(clock.elapsedTime)
 		//______________________
 
-		let all_time = options.anim.delay + options.anim.speed
-		let curr_time = H.mod(clock.elapsedTime, all_time)
-		let anim_pos = curr_time / all_time
+		// let all_time = options.anim.delay + 
+		let curr_time = H.mod(clock.elapsedTime, options.anim.speed)
+		let anim_pos = curr_time / options.anim.speed
 
-		if (options.anim.enableColor) {
-			setAnimPos(anim_pos)
-		} else {
-			curr_time = options.anim.position_anim * all_time
-		}
-		// setRadiusMainGLight(linftHalf(1.76, 2.31, curr_time / all_time), true)
+		if (options.anim.debugAnim) {
+			mDice._stop()
+			anim_pos = options.anim.position_anim
+			// setAnimPos(anim_pos)
 
-		//resort number
-		// if (true) {
-		// 	if (curr_time <= 1) { once = true }
-		// 	if (curr_time >= all_time - 0.1 && once) {
-		// 		once = false
-		// 		H.shuffle(mDiceObj.numbers)
-		// 	}
-		// }
+			// setRadiusMainGLight(linftHalf(1.76, 2.31, curr_time / all_time), true)
 
-
-		mDice.numbers.forEach((objNum, i) => {
-			const start = options.anim.delay / 20 * i
-			const end = start + options.anim.speed
-			let tp = (H.clamp(curr_time, start, end) - start) / options.anim.speed
-			// let t = -Math.PI / 2 + tp * Math.PI * 2
-
-
-
-			mDice.setColorNumber(objNum, tp)
-			const curr_h = H.ftH_easeInOutSine(options.anim.color.h, options.anim.color.h_end, tp)
-			const curr_s = H.ftH_easeInOutSine(options.anim.color.s, options.anim.color.s_end, tp)
-			objNum.obj.material.color.setHSL(
-				curr_h,
-				options.anim.color.l,
-				curr_s,
-			)
-
+			//resort number
+			// if (true) {
+			// 	if (curr_time <= 1) { once = true }
+			// 	if (curr_time >= all_time - 0.1 && once) {
+			// 		once = false
+			// 		H.shuffle(mDiceObj.numbers)
+			// 	}
 			// }
-			const sub = new Vector3().subVectors(mDice.center, objNum.center);
-			const length = sub.length();
-			const normal = sub.normalize();
-			const normal_fl = normal.clone();
-			// const pl = sinft(0., 1, clock.elapsedTime * 3.0) * length
-			// const pl = sinft(0.8, 1, clock.elapsedTime * 3.0 + options.anim.position * i) * length;
 
+			mDice.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
+				layer.forEach((objNum, i) => {
 
-			// let t2 = H.sinft(0, 1, t)
-			let t2 = H.ftH_easeInOutSine(0, 1, tp)
-			if (options.anim.show_all) t2 = 1
-			if (!options.anim.translateNumber) t2 = 0
+					objNum.setColor(iL, anim_pos)
 
-			const pl = length * (options.anim.position_number + (t2 * 0.1));
-			const new_pos = new Vector3().copy(mDice.center).add(normal.multiplyScalar(-pl));
+					if (iL == 0) {
+						objNum.light.visible = true
+						objNum.sector.visible = false
+						objNum.setLightParam(options.anim.position_light, options.anim.radius_small_light)
+					} else {
+						objNum.light.visible = false
+						objNum.sector.visible = true
+					}
 
-			objNum.obj.position.copy(new_pos)
+					//objNum.sector.visible = false
+				})
+			})
 
-			objNum.sector.visible = i != 0
+		} else {
 
+			let percent_translate = 0
+			if (mDice._startIn > 0) {
+				percent_translate = H.easeOutCirc(pc_anim)
+			}
+			else if (mDice._startProc > 0) {
+				percent_translate = 1
+			}
+			else if (mDice._startOut > 0) {
+				mDice.animOut(clock.elapsedTime, outAnim)
+				percent_translate = 1 - H.easeInSine(pc_anim)
+			}
+			mWorld.setAnimCamera(percent_translate);
+		}
 
-			// if (i ! = 0) return
-			const pl_light = length * options.anim.position_light;
-
-			// const pl_light = length * linft(0.6, 1.42, options.anim.position_anim);
-
-			const new_pos_light = new Vector3().copy(mDice.center).add(normal_fl.multiplyScalar(-pl_light));
-
-			objNum.light.scale.set(options.anim.radius_small_light, options.anim.radius_small_light, options.anim.radius_small_light)
-			objNum.light.position.copy(new_pos_light);
-			objNum.light.updateMatrixWorld();
-
-
-		})
-
-		//__________infinity 
-		// //TODO remove
-		// let scale = H.sinft(
-		// 	options.diceIn.scale - 0.01,
-		// 	options.diceIn.scale + 0.01,
-		// 	clock.elapsedTime * (options.bloom.anim_speed*0.15 - H.sinft(-0.15, 0.15, clock.elapsedTime)))
-		// mDiceObj.mesh_diceIn.scale.set(scale, scale, scale)
 		//________bloom anim
 		mBloomObj.bloomPass.radius = H.sinft(
 			options.bloom.radius,
@@ -299,19 +255,27 @@ window.create_anim = function (id_block = "canvas-container") {
 	//########################################################
 
 
-	function setAnimPos(value) {
+	function outAnim(value) {
+		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
+		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
+		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
+
+		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
+	}
+
+	function setDebugAnimPos(value) {
 		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
 		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
 
 		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
 
-		options.anim.radius_small_light = H.ftHalf(0.0, 0.68, value, H.easeInQuint, () => 1)
+		// options.anim.radius_small_light = H.ftHalf(0.0, 1.14, value, H.easeInQuint, () => 1, 0.9)
+		options.anim.radius_small_light = H.ft(0.0, 1.2, value, H.easeInQuint)
 		options.anim.position_light = H.ft(0.6, 1.25, value, H.easeInOutSine)
 
 
 		options.anim.rays_gp.updateDisplay()
-
 
 		options.anim.position_anim = value
 		options.anim.light_gp.updateDisplay()
@@ -485,34 +449,47 @@ window.create_anim = function (id_block = "canvas-container") {
 		if (true) {
 			const anim_c_hls_gp = gui.addFolder('Anim_color_hls');
 
-			var save_anim_json = (value) => { S.Set("anim-color", options.anim.color) }
+			anim_c_hls_gp.add(options.anim.color, "h", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-h", value)
+			})
+			anim_c_hls_gp.add(options.anim.color, "h2", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-h2", value)
+			})
+			anim_c_hls_gp.add(options.anim.color, "h_end", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-h_end", value)
+			})
 
-			anim_c_hls_gp.add(options.anim.color, "h", 0, 1, 0.01).onChange(save_anim_json)
-			anim_c_hls_gp.add(options.anim.color, "h_end", 0, 1, 0.01).onChange(save_anim_json)
-
-			anim_c_hls_gp.add(options.anim.color, "l", 0, 1, 0.01).onChange(save_anim_json)
-			anim_c_hls_gp.add(options.anim.color, "s", 0, 1, 0.01).onChange(save_anim_json)
-			anim_c_hls_gp.add(options.anim.color, "s_end", 0, 1, 0.01).onChange(save_anim_json)
+			anim_c_hls_gp.add(options.anim.color, "l", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-l", value)
+			})
+			anim_c_hls_gp.add(options.anim.color, "s", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-s", value)
+			})
+			anim_c_hls_gp.add(options.anim.color, "s2", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-s2", value)
+			})
+			anim_c_hls_gp.add(options.anim.color, "s_end", 0, 1, 0.01).onChange((value) => {
+				S.Set("anim-color-s_end", value)
+			})
 			// anim_c_hls_gp.open()
 		}
 		//Anim
 		if (true) {
 			const anim_gp = gui.addFolder('Anim');
-			anim_gp.add(options.anim, "enableColor").onChange((value) => {
+			anim_gp.add(options.anim, "debugAnim").onChange((value) => {
 				S.Set("anim-enableColor", value)
+				mDice.resetColor()
+				mWorld.setUpCamera()
 			})
-			anim_gp.add(options.anim, "translateNumber").onChange((value) => {
-				S.Set("anim-translateNumber", value)
-			});
-			anim_gp.add(options.anim, "rotateLight").onChange((value) => {
-				S.Set("anim-rotateLight", value)
-			});
-			anim_gp.add(options.anim, "show_all").onChange(() => {
-			});
 
-			anim_gp.add(options.anim, "position_number", -1, 1, 0.001).onChange((value) => {
-				S.Set("anim-position_number", value)
-			})
+			// anim_gp.add(options.anim, "rotateLight").onChange((value) => {
+			// 	S.Set("anim-rotateLight", value)
+			// });
+
+
+			// anim_gp.add(options.anim, "position_number", -1, 1, 0.001).onChange((value) => {
+			// 	S.Set("anim-position_number", value)
+			// })
 			anim_gp.add(options.anim, "speed", 0, 3, 0.01).onChange((value) => {
 				S.Set("anim-speed", value)
 			})
@@ -536,11 +513,11 @@ window.create_anim = function (id_block = "canvas-container") {
 				S.Set("anim-position_light", value)
 			})
 
-			setAnimPos(options.anim.position_anim)
+			setDebugAnimPos(options.anim.position_anim)
 
 			light_gp.add(options.anim, "position_anim", 0, 1, 0.01).onChange((value) => {
 				S.Set("anim-position_anim", value)
-				setAnimPos(value)
+				setDebugAnimPos(value)
 			})
 
 			light_gp.open()
@@ -551,57 +528,59 @@ window.create_anim = function (id_block = "canvas-container") {
 			const position_gp = gui.addFolder("Position number + anim")
 			options.position.gp = position_gp
 
-			/* position_gp.add(options.position, "px", -5, 5, 0.01).onChange((value) => {
-				_camera_pos(true)
+
+			const changePos = () => mWorld.changePosCamera()
+
+			position_gp.add(options.position, "typePos", ["Rotate", "Present"]).onChange((value) => {
+				mWorld._hasRotate = value == "Rotate"
+				mWorld.setUpCamera()
 			})
-			position_gp.add(options.position, "py", -5, 5, 0.01).onChange((value) => {
-				_camera_pos(true)
-			})
-			position_gp.add(options.position, "pz", -5, 5, 0.01).onChange((value) => {
-				_camera_pos(true)
-			}) */
+
+			// _addGuiPoint(position_gp.addFolder("posRotate"), options.position.posRotate, changePos)
+			// _addGuiPoint(position_gp.addFolder("posTRotate"), options.position.posTRotate, changePos)
+			// _addGuiPoint(position_gp.addFolder("posPresent"), options.position.posPresent, changePos)
+			// _addGuiPoint(position_gp.addFolder("posTPresent"), options.position.posTPresent, changePos)
 
 
 
+			options.position.sel_num = options.rotating.toNum
 			position_gp.add(options.position, "sel_num", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]).onChange((value) => {
 				mDice._sel_num = Number(value)
 				mDice.update_number(true, true)
 			});
 
-			position_gp.add(options.position, "anim_number").onChange((value) => {
-				mDice.update_number(true)
-			})
-			position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
-
-				if (options.position.anim_number && mDice.to_angle) {
-					// let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
-					let percent = options.position.anim_percent
-
-					mDice.animRotate(percent)
-				}
-			})
+			/* 	position_gp.add(options.position, "anim_number").onChange((value) => {
+					mDice.update_number(true)
+				})
+				position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
+	
+					if (options.position.anim_number && mDice.to_angle) {
+						// let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
+						let percent = options.position.anim_percent
+	
+						mDice.animRotate(percent)
+					}
+				}) */
 
 			/* 	position_gp.add(options.position, "dur_c", 0, 5, 0.01).onChange((value) => {
 					S.Get("tmp-dur_c", value)
 				})
-	
+		
 				position_gp.add(options.position, "dur", 0, 5, 0.01).onChange((value) => {
 					S.Get("tmp-dur", value)
 				}) */
 
-
-			// options.position.tmp_rad = 0
-			// options.position.tmp_grad = 0
-			// position_gp.add(options.position, "tmp_rad",0, 10, 0.01).onChange((value) => {
-			// 	options.position.tmp_grad = H.mod(value, 2)/2
-			// 	position_gp.updateDisplay()
-			// })
+			/* 
+						position_gp.add(options.position, "tmp", 0, 1, 0.01).onChange((value) => {
+							mWorld.setAnimCamera(value)
+						}) */
 
 			// position_gp.add(options.position, "tmp_grad", -360, 360, 0.01)
 
-			mDice.initGui(position_gp.addFolder("d angle"))
+			const dAngle_gp = mDice.initGui(position_gp.addFolder("d angle"))
+			// dAngle_gp.open()
 
-			// position_gp.open()
+			position_gp.open()
 		}
 
 		if (true) {
@@ -616,6 +595,10 @@ window.create_anim = function (id_block = "canvas-container") {
 			_gp.add(options.rotating, "toNum", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]).onChange((value) => {
 				S.Set("rotating-toNum", value)
 				options.rotating.toNum = Number(value)
+
+				options.position.sel_num = options.rotating.toNum
+				options.position.gp.updateDisplay()
+
 			});
 
 			_gp.add(options.rotating, "in")
@@ -631,7 +614,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			_gp.add(options.rotating, "durationOut", 0, 20, 0.01).onChange((value) => {
 				S.Set("rotating-durationOut", value)
 			})
-			// _gp.open()
+			_gp.open()
 
 		}
 		startDraw();
@@ -645,6 +628,11 @@ window.create_anim = function (id_block = "canvas-container") {
 	}
 };
 
+function _addGuiPoint(group, object, callback = (value) => { }) {
+	group.add(object, "x", -5, 5, 0.01).onChange(callback)
+	group.add(object, "y", -5, 5, 0.01).onChange(callback)
+	group.add(object, "z", -5, 5, 0.01).onChange(callback)
+}
 
 
 window.onload = () => {

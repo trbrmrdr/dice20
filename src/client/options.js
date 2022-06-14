@@ -51,19 +51,20 @@ var options = {
 
 	anim: {
 		color: {
-			h: Math.random(),
-			h_end: Math.random(),
+			h: S.Get("anim-color-h", 0.69),
+			h2: S.Get("anim-color-h2", 0.19),
+			h_end: S.Get("anim-color-h_end", 0.19),
 
-			l: 0.7,
+			l: S.Get("anim-color-l", 0.69),
 
-			s: 0.03,
-			s_end: 0.5
+			s: S.Get("anim-color-s", 0.04),
+			s2: S.Get("anim-color-s2", 0.19),
+			s_end: S.Get("anim-color-s_end", 0.62),
 		},
 
-		enableColor: S.Get("anim-enableColor", true),
+		debugAnim: S.Get("anim-enableColor", true),
 		translateNumber: S.Get("anim-translateNumber", true),
 		rotateLight: S.Get("anim-rotateLight", true),
-		show_all: false,
 		position_number: S.Get("anim-position_number", -0.09),
 
 		speed: S.Get("anim-speed", 2.74),
@@ -86,9 +87,13 @@ var options = {
 	position: {
 		gp: null,
 
-		px: S.Get('px', -0.027),
-		py: S.Get('py', 1.723),
-		pz: S.Get('pz', 1.927),
+		typePos: "Present",
+
+		posRotate: S.Get('pos_rot', new Vector3(-0.027, 1.723, 1.927)),
+		posTRotate: S.Get('pos_t_rot', new Vector3(0, 0, 0)),
+
+		posPresent: S.Get('pos_p_rot', new Vector3(-0.027, 1.723, 1.927)),
+		posTPresent: S.Get('pos_t_p_rot', new Vector3(0, 0, 0)),
 
 		sel_num: 1,
 
@@ -97,7 +102,8 @@ var options = {
 		dur_c: S.Get("tmp-dur_c", 3.0),
 		dur: S.Get("tmp-dur", 3.0),
 
-		dAngle: S.Get("pos-dn_1", new Vector3(-1.09, 3.84, -2.15))
+		dAngle: S.Get("pos-dn_1", new Vector3(-1.09, 3.84, -2.15)),
+		tmp: 0
 	},
 
 	rotating: {
@@ -112,11 +118,81 @@ var options = {
 
 		out: () => { },
 		durationOut: S.Get("rotating-durationOut", 2),
+	},
+
+	diceLayers: {
+		1: [
+			[2, 5, 14],
+			[3, 4, 6, 15, 13, 12],
+			[7, 8, 10, 11, 18, 19],
+			[9, 17, 20],
+			[16]
+		],
+		2: [
+			[1, 3, 12],
+			[4, 5, 10, 11, 13, 14],
+			[6, 8, 9, 15, 17, 18],
+			[19, 16, 7],
+			[20]
+		],
+		3: [
+			[10, 4, 2],
+			[1, 5, 8, 9, 11, 12],
+			[6, 7, 13, 14, 16, 17],
+			[18, 15, 20,],
+			[19]
+		],
+		4: [
+			[3, 5, 8],
+			[1, 2, 6, 7, 9, 10],
+			[11, 12, 14, 15, 16, 20],
+			[19, 17, 13],
+			[18]
+		],
+		5: [
+			[1, 4, 6],
+			[2, 3, 7, 8, 14, 15],
+			[9, 10, 12, 13, 19, 20],
+			[18, 16, 11],
+			[17]
+		],
+		6: [
+			[7, 15, 5],
+			[1, 4, 8, 14, 19, 20],
+			[2, 3, 9, 13, 16, 18],
+			[10, 12, 17],
+			[11]
+		],
+		7: [
+			[6, 8, 20],
+			[4, 5, 9, 15, 16, 19],
+			[1, 3, 10, 14, 17, 18],
+			[2, 11, 13],
+			[12]
+		],
+		8: [
+			[4, 7, 9],
+			[3, 5, 6, 10, 16, 20],
+			[1, 2, 11, 15, 17, 19],
+			[12, 14, 18],
+			[13]
+		],
+		9: [
+			[8, 10, 16],
+			[3, 4, 7, 11, 17, 20],
+			[2, 5, 6, 12, 18, 19],
+			[1, 13, 15],
+			[14]
+		],
+		10: [
+			[3, 9, 11],
+			[2, 4, 8, 12, 16, 17],
+			[1, 5, 7, 13, 18, 20],
+			[6, 14, 19],
+			[15]
+		]
 	}
 };
-
-// Cookies.remove("anim-color")
-options.anim.color = S.Get("anim-color", options.anim.color)
 
 /* let retStr = "["
 for (let i = 0; i < 20; ++i) {

@@ -87,19 +87,30 @@ export function ftH_easeInOutSine(from, to, t) {
 	return from + (to - from) * tv;
 }
 
-export function ftHalf(from, to, t, f1 = line, f2 = line) {
+export function ftHalf(from, to, t, f1 = line, f2 = line, half = 0.5) {
 	let tv = t * 2
-	if (tv <= 1)
-		tv = f1(tv)
+	const vHalf = 2 * half
+	if (tv <= vHalf)
+		tv = f1(tv / vHalf)
 	else
-		tv = f2(2 - tv)
+		tv = f2((2 - tv) / (2 - vHalf))
 	return from + (to - from) * tv;
 }
 
-export function bordft(from, to, t) {
-	if (t <= from) t = 0
-	else if (t >= to) t = 1
-	else t = (t - from) / (to - from)
+export function bord2(a, b, c, t) {
+	return bordft(a, b, t) - bordft(b, c, t)
+}
+export function bordft(from, to, t, func = line) {
+	if (t <= from) {
+		t = 0
+	}
+	else if (t >= to) {
+		t = 1
+	}
+	else {
+		t = (t - from) / (to - from)
+		t = func(t)
+	}
 	// console.log(t)
 	return t;
 }

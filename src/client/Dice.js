@@ -1,7 +1,8 @@
 
 import * as THREE from './libs/three.js/build/three.module.js';
+import { Vector3 } from './libs/three.js/build/three.module.js';
 import * as H from './helper.js'
-// import { Number } from "./Number.js"
+import { NumberObj } from "./NumberObj.js"
 import { options } from './options.js'
 import * as S from './saves.js'
 
@@ -12,6 +13,7 @@ export class Dice {
     groupOcl = new THREE.Group()
     group = new THREE.Group()
 
+    layer_anim = {}
     constructor() {
 
         /* Object.entries(obj).forEach(entry => {
@@ -19,7 +21,7 @@ export class Dice {
             console.log(key, value);
           }); */
 
-
+        Object.assign(this.layer_anim, options.diceLayers)
         for (const [key, value] of Object.entries(this.layer_anim)) {
             let arr = []
             value.forEach((el, i) => {
@@ -98,49 +100,20 @@ export class Dice {
         this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
     }
 
+    _numbers = []
+    addNumber(i, meshNumber, obj_n_sector) {
+        const numberObj = new NumberObj(i, meshNumber, obj_n_sector, this.center)
 
-    numbers = []
-    setColorNumber() {
+        this._numbers.push(numberObj);
 
-    }
-
-    addNumber(meshNumber, options_anim, obj_n_sector) {
-        meshNumber.material = new THREE.MeshBasicMaterial();
-
-        // obj_n_sector.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
-        // this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
-
-        const numberObj = {
-            obj: meshNumber,
-            sector: obj_n_sector,
-            center: H.getCenter(meshNumber),
-            color: {
-                h: options_anim.color.h,
-                l: options_anim.color.l,
-                s: options_anim.color.s
-            },
-
-            light: new THREE.Mesh(
-                new THREE.IcosahedronGeometry(0.35, 20),
-                new THREE.MeshBasicMaterial({ color: 0xe486d3 })
-            )
-        }
-        this.numbers.push(numberObj);
-
-        meshNumber.material.color.setHSL(numberObj.color.h, numberObj.color.l, numberObj.color.s);
         this.group.add(meshNumber);
 
-        const light = numberObj.light
-        light.position.copy(numberObj.center);
-
-        this.groupOcl.add(light);
+        this.groupOcl.add(numberObj.light);
         this.groupOcl.add(obj_n_sector);
+    }
 
-
-        if (this.numbers.length > 1) {
-            light.visible = false
-
-        }
+    resetColor() {
+        this._numbers.forEach(el => el.resetColor())
     }
 
 
@@ -249,9 +222,9 @@ export class Dice {
 
     initGui(gui) {
         this.dAngle_gp = gui
-        this.dAngle_gp.open()
-        this._sel_num = 1
+        this._sel_num = options.rotating.toNum
         this.update_number(true, true)
+        return this.dAngle_gp
     }
 
     createDAngleFolder() {
@@ -377,7 +350,16 @@ export class Dice {
     _startIn = -1
     _endInOut = -1
     _startProc = -1
-    _startOut = -1
+
+    p_startOut = -1
+    _out_step1 = false
+    _out_step2 = false
+    get _startOut() { return this.p_startOut }
+    set _startOut(value) {
+        this.p_startOut = value
+        this._out_step1 = false
+        this._out_step2 = false
+    }
 
     _ftInAngle = { f: null, t: null }
     startIn(elapsedTime) {
@@ -398,8 +380,8 @@ export class Dice {
             this._ftInAngle.f = H.Vecor3Copy(options.position.dAngle, H.PI2)
             this._ftInAngle.t = H.Vecor3Copy(this._ftInAngle.f)
         } else {
-            this._ftInAngle.f = H.Vecor3Copy(options.position.dAngle, H.PI2)
-            this._ftInAngle.t = S.GetV3(this.getNameAngle(1 + Math.ceil(Math.random() * 19)))
+            // this._ftInAngle.f = H.Vecor3Copy(options.position.dAngle, H.PI2)
+            // this._ftInAngle.t = S.GetV3(this.getNameAngle(1 + Math.ceil(Math.random() * 19)))
         }
 
         this._startProc = elapsedTime
@@ -407,6 +389,7 @@ export class Dice {
     }
 
     startOut(elapsedTime) {
+        this.resetColor()
         this._startIn = -1
         this._endInOut = elapsedTime + options.rotating.durationOut
         this._startProc = -1
@@ -416,16 +399,21 @@ export class Dice {
         this._ftInAngle.t = S.GetV3(this.getNameAngle(options.rotating.toNum))
     }
 
+
     _stop() {
         this._startIn = -1
-        this._endInOut = -1
+        // this._endInOut = -1
         this._startProc = -1
-        this._startOut = -1
+        // this._startOut = -1
     }
 
     _prc = {
         processed: () => {
 
+            this._prc.fx = H.line
+            this._prc.fy = H.line
+            this._prc.fz = () => 1
+            return
             let randf = [
                 // H.line,
                 // H.line,
@@ -460,20 +448,64 @@ export class Dice {
 
     }
 
+    lightOutAnimation(percent, first) {
+        let posLight = H.ft(0.6, 1.25, percent, H.easeInOutSine)
+        // let radiusLight = H.ftHalf(0.0, 1.14, percent, H.easeInQuint, () => 1, 0.9)
+        let radiusLight = first ?
+            H.ft(0.0, 1.14, percent, H.easeInQuint) :
+            H.ft(0.0, 0.13, percent, H.easeInQuint)
+
+        this.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
+            layer.forEach((objNum, i) => {
+
+                if (first) {
+                    objNum.setColor(iL, percent)
+
+                    if (iL == 0) {
+                        objNum.light.visible = true
+                        objNum.sector.visible = false
+                        objNum.setLightParam(posLight, radiusLight)
+                    } else {
+                        objNum.resetColor()
+                        objNum.light.visible = false
+                        objNum.sector.visible = true
+                    }
+
+                    objNum.sector.visible = false
+                } else {
+
+                    // objNum.setColor(5 - iL, percent)
+                    if (iL == 0) {
+                        objNum.setColor(iL, percent)
+                        objNum.light.visible = true
+                        objNum.setLightParam(posLight, radiusLight)
+                    } else {
+                        objNum.resetColor()
+                        objNum.light.visible = false
+                        objNum.sector.visible = true
+                    }
+                }
+            })
+        })
+    }
+
     updateRotation(elapsedTime) {
 
+        let pc_anim = 0;
         //Выход
         if (this._startOut != -1) {
-            let pc_anim = H.mod(elapsedTime - this._startOut, options.rotating.durationOut) / options.rotating.durationOut
+            pc_anim = H.mod(elapsedTime - this._startOut, options.rotating.durationOut) / options.rotating.durationOut
 
             let hasEnd = false
             if (elapsedTime >= this._endInOut) {
                 pc_anim = 1.0
                 hasEnd = true
             }
+
             // let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutBack)
             // let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutElastic)
-            let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutCirc)
+            // let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutCirc)
+            let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutSine)
             // let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutBounce)
             this.animRotate(r_pc_anim, 0, this._ftInAngle.f, this._ftInAngle.t, false)
 
@@ -483,7 +515,7 @@ export class Dice {
         }
         //Старт
         if (this._startIn != -1) {
-            let pc_anim = H.mod(elapsedTime - this._startIn, options.rotating.durationIn) / options.rotating.durationIn
+            pc_anim = H.mod(elapsedTime - this._startIn, options.rotating.durationIn) / options.rotating.durationIn
 
             let hasEnd = false
             if (elapsedTime >= this._endInOut) {
@@ -508,83 +540,91 @@ export class Dice {
             // let pc_anim = H.mod(elapsedTime - this._startProc, options.rotating.durationPrc) / options.rotating.durationPrc
             // this.animRotate(pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, true)
 
-            let prc = this._prc.update(elapsedTime)
-            this.animRotate2(prc, H.PI2, this._ftInAngle.f, this._ftInAngle.t, false)
-
+            pc_anim = this._prc.update(elapsedTime)
+            this.animRotate2(pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, false)
         }
+        return pc_anim
+    }
+
+    _startOut2 = -1
+    animOut(elapsedTime, outAnim = (x) => { }) {
+        let pos_out_anim = 0
+
+        if (this._startOut > 0) {
+
+            const dStart = options.rotating.durationOut * 0.65
+            const duration = this._out_step1 ?
+                options.rotating.durationOut * 0.8 :
+                options.rotating.durationOut
+
+            const start_anim = !this._out_step1 ?
+                this._startOut + dStart :
+                this._startOut2 + dStart
+
+            const end_first_anim = start_anim + duration
+
+            pos_out_anim = H.mod(elapsedTime - start_anim, duration) / duration
+
+            if (!this._out_step1 && end_first_anim <= elapsedTime) {
+                this._out_step1 = true
+                this._startOut2 = elapsedTime - dStart
+            }
+        }
+        pos_out_anim = H.bordft(0, 1, pos_out_anim, H.easeOutCubic)
+
+        this.lightOutAnimation(pos_out_anim, !this._out_step1)
+        if (!this._out_step1)
+        //     outAnim(1 - pos_out_anim)
+        // else
+        outAnim(pos_out_anim)
 
     }
 
-    layer_anim = {
-        1: [
-            [2, 5, 14],
-            [3, 4, 6, 15, 13, 12],
-            [7, 8, 10, 11, 18, 19],
-            [9, 17, 20],
-            [16]
-        ],
-        2: [
-            [1, 3, 12],
-            [4, 5, 10, 11, 13, 14],
-            [6, 8, 9, 15, 17, 18],
-            [19, 16, 7],
-            [20]
-        ],
-        3: [
-            [10, 4, 2],
-            [1, 5, 8, 9, 11, 12],
-            [6, 7, 13, 14, 16, 17],
-            [18, 15, 20,],
-            [19]
-        ],
-        4: [
-            [3, 5, 8],
-            [1, 2, 6, 7, 8, 9],
-            [11, 12, 14, 15, 16, 20],
-            [19, 17, 13],
-            [18]
-        ],
-        5: [
-            [1, 4, 6],
-            [2, 3, 7, 8, 14, 15],
-            [9, 10, 12, 13, 19, 20],
-            [18, 16, 11],
-            [17]
-        ],
-        6: [
-            [7, 15, 5],
-            [1, 4, 8, 14, 19, 20],
-            [2, 3, 9, 13, 16, 18],
-            [10, 12, 17],
-            [11]
-        ],
-        7: [
-            [6, 8, 20],
-            [4, 5, 9, 15, 16, 19],
-            [1, 3, 10, 14, 17, 18],
-            [2, 11, 13],
-            [12]
-        ],
-        8: [
-            [4, 7, 9],
-            [3, 5, 6, 10, 16, 20],
-            [1, 2, 11, 15, 17, 19],
-            [12, 14, 18],
-            [13]
-        ],
-        9: [
-            [8, 10, 16],
-            [3, 4, 7, 11, 17, 20],
-            [2, 5, 6, 12, 18, 19],
-            [1, 13, 15],
-            [14]
-        ],
-        10: [
-            [3, 9, 11],
-            [2, 4, 8, 12, 16, 17],
-            [1, 5, 7, 13, 18, 20],
-            [6, 14, 19],
-            [15]
+
+    _layerI = 0
+    _currLayes = null
+    _tmpMap = null
+    getLayersFrom(iNum) {
+        if (this._layerI == iNum) return this._currLayes
+        this._layerI = iNum
+        this._tmpMap = [
+            /* 2: [
+        [1, 3, 12],
+        [4, 5, 10, 11, 13, 14],
+        [6, 8, 9, 15, 17, 18],
+        [19, 16, 7],
+        [20]
+    ], */
         ]
+        /*   const numberObj = {
+              obj: meshNumber,
+              sector: obj_n_sector,
+              center: H.getCenter(meshNumber),
+              color: {
+                  h: options_anim.color.h,
+                  l: options_anim.color.l,
+                  s: options_anim.color.s
+              },
+  
+              light: new THREE.Mesh(
+                  new THREE.IcosahedronGeometry(0.35, 20),
+                  new THREE.MeshBasicMaterial({ color: 0xe486d3 })
+              )
+          }
+          this.numbers.push(numberObj); */
+        this._currLayes = [/* { objs: [] } */]
+        this._tmpMap = this.layer_anim[iNum]
+        this._tmpMap.forEach((layer, il) => {
+            var newObjs = []
+            if (il == 0) {
+                this._currLayes.push([this._numbers[iNum - 1]])
+            }
+            layer.forEach((idN, i) => {
+                newObjs.push(this._numbers[idN - 1])
+            })
+            this._currLayes.push(newObjs)
+        })
+        // console.log(this._currLayes)
+        return this._currLayes
     }
 }

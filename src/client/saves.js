@@ -7,13 +7,12 @@ export function GetV3(key, defVal = new THREE.Vector3()) {
 export function Get(key, defVal = null) {
 	let type = typeof defVal
 
-
 	let t = Cookies.get(key)
 
-	if (type?.isVector3 == true) {
+	if (defVal?.isVector3 == true) {
 		try {
 			t = JSON.parse(Cookies.get(key))
-			return new Vector3(t.x, t.y, t.z)
+			return new THREE.Vector3(t.x, t.y, t.z)
 		} catch (ex) {
 			return defVal
 		}

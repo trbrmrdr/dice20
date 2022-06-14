@@ -1,6 +1,8 @@
 import * as THREE from './libs/three.js/build/three.module.js';
 import * as S from './saves.js'
 import { OrbitControls } from './libs/three.js/examples/jsm/controls/OrbitControls.js'
+import { options } from './options.js'
+import { Vector3 } from './libs/three.js/build/three.module.js';
 
 var CANVAS_SIZE = {
     width: 1024,
@@ -42,6 +44,17 @@ export class World {
 
         //узнаём реальные размеры canvas
         this.onWindowResize()
+        //______________________________
+        // const grid = new THREE.GridHelper(100, 100, 0x000000, 0x000000);
+        // scene.add(grid);
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableRotate = false;
+        this.controls.update();
+
+        this.controls.addEventListener('change', () => {
+            this.controllChange()
+        });
+        //______________________________
         return { renderer: this.renderer, camera: this.camera };
     }
 
@@ -134,24 +147,97 @@ export class World {
         this.mouseDown = -1;
     }
 
-    controls = null
-    controllChange = (camera) => { }
-    setPosCamera(op) {
+    _hasRotate = options.position.typePos == "Rotate"
+    _hasSaveEdit = true
 
-        // const grid = new THREE.GridHelper(100, 100, 0x000000, 0x000000);
-        // scene.add(grid);
+    controllChange = () => {
 
-        this.camera.position.set(op.px, op.py, op.pz);
-        // camera.position.set(-0.06, 3.721, 4.16);
+        if (!this._hasSaveEdit) return
 
-        //____________________________
-        if (this.controls) return
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableRotate = false;
-        this.controls.update();
+        if (this._hasRotate) {
+            options.position.posRotate.x = this.camera.position.x
+            options.position.posRotate.y = this.camera.position.y
+            options.position.posRotate.z = this.camera.position.z
 
-        this.controls.addEventListener('change', () => {
-            this.controllChange(this.camera)
-        });
+
+            options.position.posTRotate.x = this.controls.target.x
+            options.position.posTRotate.y = this.controls.target.y
+            options.position.posTRotate.z = this.controls.target.z
+
+            // scope.zoom0 = scope.object.zoom;
+        } else {
+            options.position.posPresent.x = this.camera.position.x
+            options.position.posPresent.y = this.camera.position.y
+            options.position.posPresent.z = this.camera.position.z
+
+            options.position.posTPresent.x = this.controls.target.x
+            options.position.posTPresent.y = this.controls.target.y
+            options.position.posTPresent.z = this.controls.target.z
+        }
+
+
+        this.setPosCamera(true)
+
+        // options.position.gp?.updateDisplay()
+
+
+        //this.controls.update() - только при установке не из каллбека
+    }
+
+    updateCamera() {
+        this._hasSaveEdit = false
+        this.controls.update()
+        this._hasSaveEdit = true
+    }
+
+    setUpCamera() {
+        this.setPosCamera(true)
+        this.updateCamera()
+    }
+
+    changePosCamera() {
+        this.setPosCamera(true)
+        this.updateCamera()
+    }
+
+    setPosCamera(save) {
+
+        if (this._hasRotate) {
+            this.camera.position.copy(options.position.posRotate)
+            this.controls.target.copy(options.position.posTRotate)
+        } else {
+            this.camera.position.copy(options.position.posPresent)
+            this.controls.target.copy(options.position.posTPresent)
+        }
+
+
+        options.position.gp?.updateDisplay()
+        if (save) {
+            // console.log(this.posRotate, this.posPresent)
+            S.Set("pos_rot", options.position.posRotate)
+            S.Set("pos_t_rot", options.position.posTRotate)
+
+            S.Set("pos_p_rot", options.position.posPresent)
+            S.Set("pos_t_p_rot", options.position.posTPresent)
+        }
+    }
+
+    setAnimCamera(percent) {
+        const t_sub = new Vector3().subVectors(options.position.posRotate, options.position.posPresent);
+        let length = t_sub.length();
+        let normal = t_sub.normalize();
+
+        const new_pos = options.position.posPresent.clone().add(normal.multiplyScalar(length * percent));
+
+        this.camera.position.copy(new_pos);
+        //__________________-
+        const t_sub_t = new Vector3().subVectors(options.position.posTRotate, options.position.posTPresent);
+        let length_t = t_sub.length();
+        let normal_t = t_sub.normalize();
+
+        const new_pos_target = options.position.posTPresent.clone().add(normal_t.multiplyScalar(length_t * percent));
+        this.controls.target.copy(new_pos_target)
+
+        this.updateCamera()
     }
 }
