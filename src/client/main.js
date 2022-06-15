@@ -20,11 +20,12 @@ import { Bloom } from './Bloom.js'
 import { GoodRay } from './GoodRay.js'
 import { World } from './World.js'
 import { Dice } from './Dice.js'
+import { NumberObj } from './NumberObj.js';
 
 // import "./styles.scss"
 
 const enable_rays = true;
-
+const _preRelease = true
 const stats = Stats()
 stats.dom.style.left = '480px';
 document.body.appendChild(stats.dom)
@@ -165,51 +166,49 @@ window.create_anim = function (id_block = "canvas-container") {
 		let anim_pos = curr_time / options.anim.speed
 
 		if (options.anim.debugAnim) {
-			mDice._stop()
+			mDice._stop(true)
 			anim_pos = options.anim.position_anim
-			// setAnimPos(anim_pos)
 
-			// setRadiusMainGLight(linftHalf(1.76, 2.31, curr_time / all_time), true)
+			// setDebugAnimPos(anim_pos)
 
-			//resort number
-			// if (true) {
-			// 	if (curr_time <= 1) { once = true }
-			// 	if (curr_time >= all_time - 0.1 && once) {
-			// 		once = false
-			// 		H.shuffle(mDiceObj.numbers)
-			// 	}
-			// }
+			inAnim(anim_pos)
 
-			mDice.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
-				layer.forEach((objNum, i) => {
-
-					objNum.setColor(iL, anim_pos)
-
-					if (iL == 0) {
-						objNum.light.visible = true
-						objNum.sector.visible = false
-						objNum.setLightParam(options.anim.position_light, options.anim.radius_small_light)
-					} else {
-						objNum.light.visible = false
-						objNum.sector.visible = true
-					}
-
-					//objNum.sector.visible = false
-				})
+			mDice.getSpiralLayer().forEach((objNum, i) => {
+				objNum.setStartColor(i, anim_pos)
 			})
 
+			/* 	mDice.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
+					layer.forEach((objNum, i) => {
+	
+						objNum.setColorIn(anim_pos)
+	
+						if (iL == 0) {
+							objNum.light.visible = true
+							objNum.sector.visible = false
+							objNum.setLightParam(options.anim.position_light, options.anim.radius_small_light)
+						} else {
+							objNum.light.visible = false
+							objNum.sector.visible = true
+						}
+	
+						objNum.sector.visible = false
+					})
+				})
+	 */
 		} else {
 
 			let percent_translate = 0
 			if (mDice._startIn > 0) {
+				mDice.animInP(clock.elapsedTime, inAnim)
 				percent_translate = H.easeOutCirc(pc_anim)
 			}
 			else if (mDice._startProc > 0) {
 				percent_translate = 1
+				mDice.animInP(clock.elapsedTime, inAnim)
 			}
 			else if (mDice._startOut > 0) {
 				mDice.animOut(clock.elapsedTime, outAnim)
-				percent_translate = 1 - H.easeInSine(pc_anim)
+				percent_translate = 1 - H.easeOutCubic(pc_anim)
 			}
 			mWorld.setAnimCamera(percent_translate);
 		}
@@ -222,14 +221,12 @@ window.create_anim = function (id_block = "canvas-container") {
 		)
 		//_________________________
 
-
 		if (options.anim.rotateLight) {
 			mDice.rotateLight(delta * 0.25, clock.elapsedTime)
 		}
 
 		// renderer.render(scene, camera);
 		// renderer.render(sceneOCL, camera);
-
 
 		camera.updateMatrixWorld();
 		if (enable_rays) {
@@ -256,29 +253,38 @@ window.create_anim = function (id_block = "canvas-container") {
 
 
 	function outAnim(value) {
-		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
+		mGoodRay.grPass.uniforms.fDensity.value = 0.9
+		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
 
 		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
 	}
+	function inAnim(value) {
+		setRadiusMainGLight(0)
+
+		mGoodRay.grPass.uniforms.fExposure.value = 0.68//H.ftHalf(0.33, 0.5, value, H.easeInOutSine)
+		mGoodRay.grPass.uniforms.fDensity.value = 0.78
+		mGoodRay.grPass.uniforms.fWeight.value = 0.43//H.ft(0.23, 0.46, value, H.easeInOutSine)
+		mGoodRay.grPass.uniforms.fClamp.value = 0.81
+	}
 
 	function setDebugAnimPos(value) {
-		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
+		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
 		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
 
 		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
 
 		// options.anim.radius_small_light = H.ftHalf(0.0, 1.14, value, H.easeInQuint, () => 1, 0.9)
 		options.anim.radius_small_light = H.ft(0.0, 1.2, value, H.easeInQuint)
-		options.anim.position_light = H.ft(0.6, 1.25, value, H.easeInOutSine)
+		options.anim.position_light = H.ft(0.6, 0.79, value, H.easeInOutSine)
 
 
-		options.anim.rays_gp.updateDisplay()
+		options.anim.rays_gp?.updateDisplay()
 
 		options.anim.position_anim = value
-		options.anim.light_gp.updateDisplay()
+		options.anim.light_gp?.updateDisplay()
 
 	}
 
@@ -408,7 +414,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 		}
 		//godrays
-		if (true) {
+		if (!_preRelease && true) {
 			options.anim.rays_gp = gui.addFolder("Rays");
 			let rays_gp = options.anim.rays_gp
 
@@ -446,7 +452,7 @@ window.create_anim = function (id_block = "canvas-container") {
 		}
 		//_______________
 		//Anim color HLS 
-		if (true) {
+		if (!_preRelease && true) {
 			const anim_c_hls_gp = gui.addFolder('Anim_color_hls');
 
 			anim_c_hls_gp.add(options.anim.color, "h", 0, 1, 0.01).onChange((value) => {
@@ -475,7 +481,8 @@ window.create_anim = function (id_block = "canvas-container") {
 		}
 		//Anim
 		if (true) {
-			const anim_gp = gui.addFolder('Anim');
+			options.anim.gp = gui.addFolder('Anim');
+			const anim_gp = options.anim.gp
 			anim_gp.add(options.anim, "debugAnim").onChange((value) => {
 				S.Set("anim-enableColor", value)
 				mDice.resetColor()
@@ -520,7 +527,9 @@ window.create_anim = function (id_block = "canvas-container") {
 				setDebugAnimPos(value)
 			})
 
-			light_gp.open()
+			if (!_preRelease) {
+				light_gp.open()
+			}
 		}
 		//_________________
 		//position
@@ -532,14 +541,19 @@ window.create_anim = function (id_block = "canvas-container") {
 			const changePos = () => mWorld.changePosCamera()
 
 			position_gp.add(options.position, "typePos", ["Rotate", "Present"]).onChange((value) => {
+				options.anim.debugAnim = true
+				options.anim.gp.updateDisplay()
+				options.anim.gp.open()
+
 				mWorld._hasRotate = value == "Rotate"
+
 				mWorld.setUpCamera()
 			})
 
-			// _addGuiPoint(position_gp.addFolder("posRotate"), options.position.posRotate, changePos)
-			// _addGuiPoint(position_gp.addFolder("posTRotate"), options.position.posTRotate, changePos)
-			// _addGuiPoint(position_gp.addFolder("posPresent"), options.position.posPresent, changePos)
-			// _addGuiPoint(position_gp.addFolder("posTPresent"), options.position.posTPresent, changePos)
+			_addGuiPoint(position_gp.addFolder("posRotate"), options.position.posRotate, changePos)
+			_addGuiPoint(position_gp.addFolder("posTRotate"), options.position.posTRotate, changePos)
+			_addGuiPoint(position_gp.addFolder("posPresent"), options.position.posPresent, changePos)
+			_addGuiPoint(position_gp.addFolder("posTPresent"), options.position.posTPresent, changePos)
 
 
 
@@ -549,18 +563,18 @@ window.create_anim = function (id_block = "canvas-container") {
 				mDice.update_number(true, true)
 			});
 
-			/* 	position_gp.add(options.position, "anim_number").onChange((value) => {
-					mDice.update_number(true)
-				})
-				position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
-	
-					if (options.position.anim_number && mDice.to_angle) {
-						// let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
-						let percent = options.position.anim_percent
-	
-						mDice.animRotate(percent)
-					}
-				}) */
+			position_gp.add(options.position, "anim_number").onChange((value) => {
+				mDice.update_number(true)
+			})
+			position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
+
+				if (options.position.anim_number && mDice.to_angle) {
+					// let percent = (clock.elapsedTime - start_time_rot) / options.position.dur
+					let percent = options.position.anim_percent
+
+					mDice.animRotate(percent)
+				}
+			})
 
 			/* 	position_gp.add(options.position, "dur_c", 0, 5, 0.01).onChange((value) => {
 					S.Get("tmp-dur_c", value)
@@ -577,10 +591,15 @@ window.create_anim = function (id_block = "canvas-container") {
 
 			// position_gp.add(options.position, "tmp_grad", -360, 360, 0.01)
 
-			const dAngle_gp = mDice.initGui(position_gp.addFolder("d angle"))
-			// dAngle_gp.open()
+			if (_preRelease) {
+				mDice.initGui()
+			} else {
+				const dAngle_gp = mDice.initGui(position_gp.addFolder("d angle"))
+				// dAngle_gp.open()
+				position_gp.open()
+			}
 
-			position_gp.open()
+
 		}
 
 		if (true) {
@@ -597,7 +616,7 @@ window.create_anim = function (id_block = "canvas-container") {
 				options.rotating.toNum = Number(value)
 
 				options.position.sel_num = options.rotating.toNum
-				options.position.gp.updateDisplay()
+				options.position.gp?.updateDisplay()
 
 			});
 
@@ -617,6 +636,9 @@ window.create_anim = function (id_block = "canvas-container") {
 			_gp.open()
 
 		}
+
+
+		gui.add(options, "drawData")
 		startDraw();
 
 	}

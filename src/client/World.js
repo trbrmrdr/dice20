@@ -69,6 +69,8 @@ export class World {
 
     canvasSize = { width: 0, height: 0 };
     onWindowResize() {
+        // let new_height = this.div_canvas.clientHeight
+        // let new_width = new_height / CANVAS_SIZE.height * CANVAS_SIZE.width;
         let new_width = this.div_canvas.clientWidth
         let new_height = new_width / CANVAS_SIZE.width * CANVAS_SIZE.height;
 
@@ -213,7 +215,6 @@ export class World {
 
         options.position.gp?.updateDisplay()
         if (save) {
-            // console.log(this.posRotate, this.posPresent)
             S.Set("pos_rot", options.position.posRotate)
             S.Set("pos_t_rot", options.position.posTRotate)
 
@@ -232,8 +233,8 @@ export class World {
         this.camera.position.copy(new_pos);
         //__________________-
         const t_sub_t = new Vector3().subVectors(options.position.posTRotate, options.position.posTPresent);
-        let length_t = t_sub.length();
-        let normal_t = t_sub.normalize();
+        let length_t = t_sub_t.length();
+        let normal_t = t_sub_t.normalize();
 
         const new_pos_target = options.position.posTPresent.clone().add(normal_t.multiplyScalar(length_t * percent));
         this.controls.target.copy(new_pos_target)

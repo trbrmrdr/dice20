@@ -18,7 +18,7 @@ var options = {
 		reflectivity: S.Get("dice-reflectivity", 0.26),
 		// roughness: S.Get("dice-roughness", 0.93),
 		roughness: S.Get("dice-roughness", 0.73),
-		transmission: S.Get("dice-transmission", 0.96),
+		transmission: S.Get("dice-transmission", 1.0),
 		// thickness: S.Get("dice-thickness", 0.15),
 		thickness: S.Get("dice-thickness", 0.11),
 
@@ -37,38 +37,39 @@ var options = {
 
 	bloom: {
 		// exposure: S.Get("bloom-exposure", 1),
-		exposure: S.Get("bloom-exposure", 0.99),
+		exposure: S.Get("bloom-exposure", 1.05),
 
 		// strength: S.Get("bloom-strength", 6.3),
-		strength: S.Get("bloom-strength", 4.6),
+		strength: S.Get("bloom-strength", 4.2),
 
 		// radius: S.Get("bloom-radius", 0.40),
 		radius: S.Get("bloom-radius", 0.52),
-		radius_end: S.Get("bloom-radius_end", 0.60),
+		radius_end: S.Get("bloom-radius_end", 1.31),
 		// anim_speed: S.Get("bloom-anim_speed", 3.8)
-		anim_speed: S.Get("bloom-anim_speed", 1.6)
+		anim_speed: S.Get("bloom-anim_speed", 4)
 	},
 
 	anim: {
+		gp: null,
 		color: {
-			h: S.Get("anim-color-h", 0.69),
-			h2: S.Get("anim-color-h2", 0.19),
-			h_end: S.Get("anim-color-h_end", 0.19),
+			h: S.Get("anim-color-h", 0.7),
+			h2: S.Get("anim-color-h2", 0.92),
+			h_end: S.Get("anim-color-h_end", 0.18),
 
-			l: S.Get("anim-color-l", 0.69),
+			l: S.Get("anim-color-l", 0.68),
 
 			s: S.Get("anim-color-s", 0.04),
-			s2: S.Get("anim-color-s2", 0.19),
+			s2: S.Get("anim-color-s2", 0.25),
 			s_end: S.Get("anim-color-s_end", 0.62),
 		},
 
-		debugAnim: S.Get("anim-enableColor", true),
+		debugAnim: S.Get("anim-enableColor", false),
 		translateNumber: S.Get("anim-translateNumber", true),
 		rotateLight: S.Get("anim-rotateLight", true),
 		position_number: S.Get("anim-position_number", -0.09),
 
-		speed: S.Get("anim-speed", 2.74),
-		delay: S.Get("anim-delay", 0.27),
+		speed: S.Get("anim-speed", 1.57),
+		delay: S.Get("anim-delay", 0.21),
 
 
 		setAnimPos: null,
@@ -89,11 +90,13 @@ var options = {
 
 		typePos: "Present",
 
-		posRotate: S.Get('pos_rot', new Vector3(-0.027, 1.723, 1.927)),
-		posTRotate: S.Get('pos_t_rot', new Vector3(0, 0, 0)),
 
-		posPresent: S.Get('pos_p_rot', new Vector3(-0.027, 1.723, 1.927)),
-		posTPresent: S.Get('pos_t_p_rot', new Vector3(0, 0, 0)),
+
+		posRotate: S.Get('pos_rot', new Vector3(0.034, 1.950, 1.950)),
+		posTRotate: S.Get('pos_t_rot', new Vector3(0.060, 0.012, 0.012)),
+
+		posPresent: S.Get('pos_p_rot', new Vector3(-0.124, 1.591, 1.251)),
+		posTPresent: S.Get('pos_t_p_rot', new Vector3(-0.107, 0.305, -0.035)),
 
 		sel_num: 1,
 
@@ -111,13 +114,13 @@ var options = {
 		toNum: S.Get("rotating-toNum", 20),
 
 		in: () => { },
-		durationIn: S.Get("rotating-durationIn", 1),
+		durationIn: S.Get("rotating-durationIn", 2.5),
 
 		processed: () => { },
 		durationPrc: S.Get("rotating-durationPrc", 2.5),
 
 		out: () => { },
-		durationOut: S.Get("rotating-durationOut", 2),
+		durationOut: S.Get("rotating-durationOut", 4),
 	},
 
 	diceLayers: {
@@ -191,42 +194,55 @@ var options = {
 			[6, 14, 19],
 			[15]
 		]
+	},
+
+
+	drawData: () => {
+		console.log("________")
+		let retStr = "["
+		for (let i = 0; i <= 20; ++i) {
+			retStr += JSON.stringify(S.Get(`pos-dn_${i}`, new Vector3()))
+			if (i != 20) retStr += ","
+			retStr += "\n"
+		}
+		retStr += "]"
+		console.log(retStr)
+		console.log("________")
+		console.log(logVector("pos_rot"))
+		console.log(logVector("pos_t_rot"))
+		console.log(logVector("pos_p_rot"))
+		console.log(logVector("pos_t_p_rot"))
 	}
 };
 
-/* let retStr = "["
-for (let i = 0; i < 20; ++i) {
-	retStr += JSON.stringify(S.Get(`pos-dn_${i}`, new Vector3()))
-	if (i != 19) retStr += ","
-	retStr += "\n"
+function logVector(key) {
+	let t = S.Get(key)
+	return `S.Get('${key}',  new Vector3(${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)}))`
 }
-retStr += "]"
-console.log(retStr) */
-
 
 if (!Cookies.get('pos-dn_0')) {
 	console.log("-----resaved")
-	let points = [
-		{ "x": 0, "y": 0, "z": 0 },
-		{ "x": -0.3642968750000055, "y": 1.6049609375000031, "z": -2.0162890624999945 },
-		{ "x": -1.8223828124999997, "y": 2.733398437500015, "z": -0.9463671874999957 },
-		{ "x": -0.6484375000000013, "y": 2.714726562500025, "z": -1.0202343749999974 },
-		{ "x": 0.6696484375000047, "y": 2.9372265625000176, "z": -1.0955859374999992 },
-		{ "x": -1.6669140624999927, "y": 7.605039062500007, "z": 0.6621874999999998 },
-		{ "x": -1.2581249999999946, "y": 1.2494921875000067, "z": 1.4214453125000015 },
-		{ "x": 1.840859375000001, "y": 1.0911718749999992, "z": -1.9079687500000004 },
-		{ "x": 1.4133593750000006, "y": 6.679960937500032, "z": -2.2320703125000008 },
-		{ "x": -1.2505859374999964, "y": 3.287109375000017, "z": 0.9208984374999999 },
-		{ "x": -1.1276953124999893, "y": 9.77835937499987, "z": -0.3068359375000002 },
-		{ "x": -1.4159374999999959, "y": 3.701132812500009, "z": 4.629374999999998 },
-		{ "x": -3.965234374999969, "y": 12.959218749999913, "z": 0.8712109374999999 },
-		{ "x": -1.9178515624999957, "y": -0.15804687500000084, "z": -0.3940625000000002 },
-		{ "x": 0.13699218749999945, "y": 0.5635937499999997, "z": 1.3491015625000016 },
-		{ "x": -0.6754296875000017, "y": 1.3453906250000023, "z": 2.130117187500002 },
-		{ "x": 0.5933203125000006, "y": 3.9926171874999996, "z": 0.6010546874999992 },
-		{ "x": -0.3684765625000007, "y": 4.752382812499998, "z": 0 },
-		{ "x": 0.3743359374999983, "y": -0.38554687500000323, "z": 0.3224609374999995 },
-		{ "x": 0.891367187500003, "y": 0.6239062500000008, "z": -0.21003906250000026 }
+	let points = [{ "x": 0, "y": 0, "z": 0 },
+	{ "x": -3.5835937499999932, "y": 2.7702343750000002, "z": 0.48074218749999953 },
+	{ "x": 0.396367187500032, "y": 24.9042187499994, "z": -3.0496874999999886 },
+	{ "x": -2.251601562499981, "y": 2.2597265625000396, "z": 0.30867187500000376 },
+	{ "x": 0.876679687500002, "y": 14.517929687499912, "z": -2.4198046874999855 },
+	{ "x": -0.7894140624999822, "y": 13.095312499999924, "z": -1.1363671874999997 },
+	{ "x": -0.9809765624999811, "y": 0.252379385640705, "z": 0.09367187499999963 },
+	{ "x": 6.227929687499979, "y": -0.2867968749999628, "z": -0.6564453124999977 },
+	{ "x": 0.5669921875000125, "y": 5.888476562500073, "z": -0.9128515624999972 },
+	{ "x": -1.995312499999996, "y": 2.9778125000000215, "z": 2.1815234375000045 },
+	{ "x": -1.8595703124999805, "y": 9.429882812499766, "z": 1.1045312499999982 },
+	{ "x": -1.658242187499989, "y": 3.332890625000011, "z": 6.065742187500001 },
+	{ "x": -5.645781249999941, "y": 13.233828124999748, "z": 2.481757812500004 },
+	{ "x": -2.5535937499999783, "y": 0.618828124999998, "z": -1.4946484375000002 },
+	{ "x": -0.8255078125000018, "y": -0.5905078124999996, "z": 1.496171875000001 },
+	{ "x": -0.9367187500000006, "y": 0.2528125000000014, "z": 1.4468359375000013 },
+	{ "x": -0.36195312500000065, "y": 2.6743359375000018, "z": 0.1378906249999995 },
+	{ "x": -0.7257421874999992, "y": 3.3907421874999923, "z": 0.5038671874999986 },
+	{ "x": 0.9863281249999993, "y": -1.3751953124999832, "z": 2.016953125000005 },
+	{ "x": 0.02230468750000125, "y": -0.2764843750000024, "z": 0.5840234374999989 },
+	{ "x": -6.0895312499999985, "y": 6.885898437499928, "z": 0.2303515625000223 }
 	]
 
 	points.forEach((el, i) => {

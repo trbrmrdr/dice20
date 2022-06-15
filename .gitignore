@@ -79,3 +79,5 @@ dev/
 src/client/libs/tree.js
 src/client/libs/ThreeCSG
 
+public/bundle.js
+public/bundle.js.LICENSE.txt
