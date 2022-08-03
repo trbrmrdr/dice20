@@ -41,7 +41,8 @@ const mDice = new Dice();
 
 const clock = new THREE.Clock();
 
-window.create_anim = function (id_block = "canvas-container") {
+window.create_anim = function (id_block = "canvas-container", start_num = options.rotating.toNum) {
+	options.rotating.toNum = start_num || 1
 
 	const { renderer, camera } = mWorld.createRenderer(document.getElementById(id_block));
 
@@ -96,43 +97,96 @@ window.create_anim = function (id_block = "canvas-container") {
 		function (obj) {
 			if (obj.parent) return
 			mDice.initLight(obj.children, options.light)
-			load_two();
+			load_dice();
 		}
 	);
 
 
-	function load_two() {
+	const _fi = function (i) { return (i < 10 ? '0' : '') + i };
+	var _count_numbers = -1
+	var _needed_load_layers = {
+		0: 20,
+		1: 40,
+		2: 60,
+		3: 80,
+		4: 100,
+	};
+	function load_dice() {
 		new OBJLoader().load("data/dice.obj",
 			function (obj) {
 
-				console.log(obj)
+				// console.log(obj)
 
 				var mesh_diceIn = obj.getObjectByName("DICE_clear");
-				var mesh_dice = obj.getObjectByName("DICE_cut");
 
-				// mesh_diceIn.removeFromParent()
-				// mesh_diceIn = mesh_dice.clone()
+				var sectors = []
+				for (let i = 1; i <= 20; ++i) {
+					let ni = _fi(i)
+					let obj_n_sector = obj.getObjectByName(`DICE_IN_${ni}`)
+					sectors.push(obj_n_sector)
+				}
+				mDice.initDice(mesh_diceIn, options.diceIn, sectors)
 
-				//____________________
-				// var mesh_diceIn = obj.getObjectByName("DICE_dice");
-				// var mesh_dice = obj.getObjectByName("DICE_IN_dice_in");
-				//____________________
+				var first_layer = mDice.selectLayer(options.rotating.toNum)
+				load_layers(first_layer)
+			},
+			function (xhr) {
+				// console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+			},
+			function (error) {
+				console.log('An error happened', error);
+			});
+	};
 
-				mDice.initDice(mesh_dice, options.dice, mesh_diceIn, options.diceIn)
+	var _inited = false
+	function load_layers(layserI) {
+		var nameI = _needed_load_layers[layserI]
+		delete _needed_load_layers[layserI];
+
+		new OBJLoader().load(`data/dice_${nameI}.obj`,
+			function (obj) {
+				console.log(`loaded ${nameI}`);
+
+				var cut_dice = obj.getObjectByName(`DICE_cut_${layserI + 1}`);
+				if (!cut_dice) {
+					console.log("AAAAA 222");
+				}
+				mDice.setCutDice(layserI, options.dice, cut_dice);
+
 
 				for (let i = 1; i <= 20; ++i) {
-					let ni = (i < 10 ? '0' : '') + i
+					// console.log("_____")
+					// for (let li = 0; li <= 4; ++li) {
+					let li = layserI
+					let ti = i + (li * 20)
+					if (true) {
+						let ni = _fi(ti)
+						// console.log(i + (li * 20))
+						let obj_number = obj.getObjectByName(`n${ni}`) || obj.getObjectByName(`${ni}`)
+						if (!obj_number) {
+							console.log("AAAAA");
+						}
 
-					let obj_number = obj.getObjectByName(`n${ni}`)
-					let obj_n_sector = obj.getObjectByName(`DICE_IN_${ni}`)
-					mBloomObj.enable(obj_number)
+						mDice.setNumbers(i - 1, layserI, obj_number)
 
-					mDice.addNumber(i, obj_number, obj_n_sector)
+						mBloomObj.enable(obj_number)
+
+						_count_numbers = Math.max(_count_numbers, ni)
+					}
 				}
 
-				mDice.initGodLight()
+				let keys = Object.keys(_needed_load_layers);
+				if (!_inited) {
+					_inited = true
+					mDice.initGodLight()
+					setupGUIConfigs()
+				}
+				if (keys.length <= 0) {
+					allLoadedObjectsCallback()
+				} else {
+					load_layers(Number.parseInt(Object.keys(_needed_load_layers)[0]))
+				}
 
-				setupGUIConfigs()
 			},
 			function (xhr) {
 				// console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -171,7 +225,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 			// setDebugAnimPos(anim_pos)
 
-			inAnim(anim_pos)
+			mDice.updateAnimInProcess(anim_pos)
 
 			mDice.getSpiralLayer().forEach((objNum, i) => {
 				objNum.setStartColor(i, anim_pos)
@@ -179,9 +233,9 @@ window.create_anim = function (id_block = "canvas-container") {
 
 			/* 	mDice.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
 					layer.forEach((objNum, i) => {
-	
+		
 						objNum.setColorIn(anim_pos)
-	
+		
 						if (iL == 0) {
 							objNum.light.visible = true
 							objNum.sector.visible = false
@@ -190,27 +244,15 @@ window.create_anim = function (id_block = "canvas-container") {
 							objNum.light.visible = false
 							objNum.sector.visible = true
 						}
-	
+		
 						objNum.sector.visible = false
 					})
 				})
 	 */
 		} else {
 
-			let percent_translate = 0
-			if (mDice._startIn > 0) {
-				mDice.animInP(clock.elapsedTime, inAnim)
-				percent_translate = H.easeOutCirc(pc_anim)
-			}
-			else if (mDice._startProc > 0) {
-				percent_translate = 1
-				mDice.animInP(clock.elapsedTime, inAnim)
-			}
-			else if (mDice._startOut > 0) {
-				mDice.animOut(clock.elapsedTime, outAnim)
-				percent_translate = 1 - H.easeOutCubic(pc_anim)
-			}
-			mWorld.setAnimCamera(percent_translate);
+			let percent_anim_camera = mDice.update(clock.elapsedTime, updateAnimGoodRay_in, updateAnimGoodRay_out);
+			mWorld.setAnimCamera(percent_anim_camera);
 		}
 
 		//________bloom anim
@@ -252,15 +294,15 @@ window.create_anim = function (id_block = "canvas-container") {
 	//########################################################
 
 
-	function outAnim(value) {
-		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, value))
+	function updateAnimGoodRay_out(percent) {
+		mGoodRay.grPass.uniforms.fExposure.value = H.ftHalf(0.63, 0.8, H.bordft(0.6, 1, percent))
 		mGoodRay.grPass.uniforms.fDensity.value = 0.9
-		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, value), H.easeOutQuad)
-		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, value, (x) => 1, H.easeOutSine)
+		mGoodRay.grPass.uniforms.fWeight.value = H.ft(0.15, 0.63, H.bordft(0.4, 1, percent), H.easeOutQuad)
+		mGoodRay.grPass.uniforms.fClamp.value = H.ftHalf(0, 1, percent, (x) => 1, H.easeOutSine)
 
-		setRadiusMainGLight(H.ftHalf(0.0, 2.26, value, H.easeOutCubic, H.easeOutCubic))
+		setRadiusMainGLight(H.ftHalf(0.0, 2.26, percent, H.easeOutCubic, H.easeOutCubic))
 	}
-	function inAnim(value) {
+	function updateAnimGoodRay_in(percent) {
 		setRadiusMainGLight(0)
 
 		mGoodRay.grPass.uniforms.fExposure.value = 0.68//H.ftHalf(0.33, 0.5, value, H.easeInOutSine)
@@ -377,16 +419,16 @@ window.create_anim = function (id_block = "canvas-container") {
 			let dice_gp = gui.addFolder("Dice");
 
 			dice_gp.add(options.dice, "reflectivity", 0, 1, 0.01).onChange((value) => {
-				mDice.mesh_dice.material.reflectivity = S.Set("dice-reflectivity", value)
+				mDice.dice_Material.reflectivity = S.Set("dice-reflectivity", value)
 			});
 			dice_gp.add(options.dice, "roughness", 0, 1, 0.01).onChange((value) => {
-				mDice.mesh_dice.material.roughness = S.Set("dice-roughness", value)
+				mDice.dice_Material.roughness = S.Set("dice-roughness", value)
 			});
 			dice_gp.add(options.dice, "transmission", 0, 1, 0.01).onChange((value) => {
-				mDice.mesh_dice.material.transmission = S.Set("dice-transmission", value)
+				mDice.dice_Material.transmission = S.Set("dice-transmission", value)
 			});
 			dice_gp.add(options.dice, "thickness", 0, 4, 0.01).onChange((value) => {
-				mDice.mesh_dice.material.thickness = S.Set("dice-thickness", value)
+				mDice.dice_Material.thickness = S.Set("dice-thickness", value)
 			});
 
 
@@ -396,20 +438,20 @@ window.create_anim = function (id_block = "canvas-container") {
 
 				switch (value) {
 					case "none":
-						mDice.mesh_dice.material.bumpMap = null
+						mDice.dice_Material.bumpMap = null
 						break;
 					case "type_1":
-						mDice.mesh_dice.material.bumpMap = mDice.dice_bump
+						mDice.dice_Material.bumpMap = mDice.dice_bump
 						break;
 					case "type_2":
-						mDice.mesh_dice.material.bumpMap = mDice.dice_bump_in
+						mDice.dice_Material.bumpMap = mDice.dice_bump_in
 						break;
 				}
 
-				mDice.mesh_dice.material.needsUpdate = true;
+				mDice.dice_Material.needsUpdate = true;
 			});
 			dice_gp.add(options.dice, "bumpScale", 0, 3, 0.01).onChange((value) => {
-				mDice.mesh_dice.material.bumpScale = S.Set("dice-bumpScale", value)
+				mDice.dice_Material.bumpScale = S.Set("dice-bumpScale", value)
 			});
 
 		}
@@ -564,6 +606,7 @@ window.create_anim = function (id_block = "canvas-container") {
 			});
 
 			position_gp.add(options.position, "anim_number").onChange((value) => {
+				mDice._stop(true)
 				mDice.update_number(true)
 			})
 			position_gp.add(options.position, "anim_percent", 0, 1, 0.01).onChange((value) => {
@@ -592,9 +635,9 @@ window.create_anim = function (id_block = "canvas-container") {
 			// position_gp.add(options.position, "tmp_grad", -360, 360, 0.01)
 
 			if (_preRelease) {
-				mDice.initGui()
+				mDice.start()
 			} else {
-				const dAngle_gp = mDice.initGui(position_gp.addFolder("d angle"))
+				const dAngle_gp = mDice.start(position_gp.addFolder("d angle"))
 				// dAngle_gp.open()
 				position_gp.open()
 			}
@@ -602,40 +645,7 @@ window.create_anim = function (id_block = "canvas-container") {
 
 		}
 
-		if (true) {
-			const _gp = gui.addFolder("Rotating")
-			options.rotating.gp = _gp
-
-
-			options.rotating.in = _in
-			options.rotating.processed = _processed
-			options.rotating.out = _out
-
-			_gp.add(options.rotating, "toNum", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]).onChange((value) => {
-				S.Set("rotating-toNum", value)
-				options.rotating.toNum = Number(value)
-
-				options.position.sel_num = options.rotating.toNum
-				options.position.gp?.updateDisplay()
-
-			});
-
-			_gp.add(options.rotating, "in")
-			_gp.add(options.rotating, "processed")
-			_gp.add(options.rotating, "out")
-
-			_gp.add(options.rotating, "durationIn", 0, 10, 0.01).onChange((value) => {
-				S.Set("rotating-durationIn", value)
-			})
-			_gp.add(options.rotating, "durationPrc", 0, 10, 0.01).onChange((value) => {
-				S.Set("rotating-durationPrc", value)
-			})
-			_gp.add(options.rotating, "durationOut", 0, 20, 0.01).onChange((value) => {
-				S.Set("rotating-durationOut", value)
-			})
-			_gp.open()
-
-		}
+		// lastGuiAfterLoadedAllNumber()
 
 
 		gui.add(options, "drawData")
@@ -643,8 +653,50 @@ window.create_anim = function (id_block = "canvas-container") {
 
 	}
 
+	// function lastGuiAfterLoadedAllNumber() {
+	function allLoadedObjectsCallback() {
+		if (!gui) return;
+		const _gp = gui.addFolder("Rotating")
+		options.rotating.gp = _gp
+
+
+		options.rotating.in = _in
+		options.rotating.processed = _processed
+		options.rotating.out = _out
+
+		var foo = [...Array(_count_numbers + 1).keys()];
+		foo.splice(0, 1);
+		_gp.add(options.rotating, "toNum", foo).onChange((value) => {
+			S.Set("rotating-toNum", value)
+			options.rotating.toNum = Number(value)
+
+			options.position.sel_num = options.rotating.toNum
+			options.position.gp?.updateDisplay()
+
+		});
+
+		_gp.add(options.rotating, "in")
+		_gp.add(options.rotating, "processed")
+		_gp.add(options.rotating, "out")
+
+		_gp.add(options.rotating, "durationIn", 0, 10, 0.01).onChange((value) => {
+			S.Set("rotating-durationIn", value)
+		})
+		_gp.add(options.rotating, "durationPrc", 0, 10, 0.01).onChange((value) => {
+			S.Set("rotating-durationPrc", value)
+		})
+		_gp.add(options.rotating, "durationOut", 0, 20, 0.01).onChange((value) => {
+			S.Set("rotating-durationOut", value)
+		})
+		_gp.open()
+	}
+
 
 	function startDraw() {
+		if (!gui) {
+			mDice.start()
+		}
+		_out()
 		mWorld.attachWindowResizer()
 		draw();
 	}

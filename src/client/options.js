@@ -4,7 +4,7 @@ import Cookies from 'js-cookie'
 
 var options = {
 	global: {
-		background: S.Get("backColor", 0x20000),
+		background: S.Get("backColor", 0xb0111),
 	},
 	diceIn: {
 		color: S.Get("diceIn-color", 0x1243d9),
@@ -111,13 +111,13 @@ var options = {
 
 	rotating: {
 		gp: null,
-		toNum: S.Get("rotating-toNum", 20),
+		toNum: S.Get("rotating-toNum", 100),
 
 		in: () => { },
-		durationIn: S.Get("rotating-durationIn", 2.5),
+		durationIn: S.Get("rotating-durationIn", 2),
 
 		processed: () => { },
-		durationPrc: S.Get("rotating-durationPrc", 2.5),
+		durationPrc: S.Get("rotating-durationPrc", 2),
 
 		out: () => { },
 		durationOut: S.Get("rotating-durationOut", 4),
@@ -242,7 +242,7 @@ if (!Cookies.get('pos-dn_0')) {
 	{ "x": -0.7257421874999992, "y": 3.3907421874999923, "z": 0.5038671874999986 },
 	{ "x": 0.9863281249999993, "y": -1.3751953124999832, "z": 2.016953125000005 },
 	{ "x": 0.02230468750000125, "y": -0.2764843750000024, "z": 0.5840234374999989 },
-	{ "x": -6.0895312499999985, "y": 6.885898437499928, "z": 0.2303515625000223 }
+	{ "x": 0.08588524598521452, "y": -11.81314161837402, "z": 0.2303515625000223 }
 	]
 
 	points.forEach((el, i) => {

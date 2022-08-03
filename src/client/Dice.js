@@ -44,14 +44,66 @@ export class Dice {
         this.dice_bump = textureLoader.load("data/barhat_bump.jpg");
     }
 
-    initDice(mesh_dice, optionsDice,
-        mesh_diceIn, optionsDiceIn
-    ) {
-        //material mesh_dice
+    initDice(mesh_diceIn, optionsDiceIn, objs_sector) {
+        //material diceIn
         if (true) {
-            mesh_dice.material = new THREE.MeshPhysicalMaterial()
+            mesh_diceIn.scale.set(optionsDiceIn.scale, optionsDiceIn.scale, optionsDiceIn.scale)
 
-            const mat = mesh_dice.material;
+            mesh_diceIn.material = new THREE.MeshStandardMaterial()
+            const mat = mesh_diceIn.material
+            mat.roughness = optionsDiceIn.roughness
+            mat.metalness = optionsDiceIn.metalness
+
+            mat.bumpScale = optionsDiceIn.bumpScale
+            mat.bumpMap = this.dice_bump_in
+        }
+
+        this.center = H.getCenter(mesh_diceIn);
+        this.radius = mesh_diceIn.geometry.boundingSphere.radius
+
+        this.mesh_diceIn = mesh_diceIn
+
+        this.group.add(mesh_diceIn)
+
+        objs_sector.forEach(sector => {
+            const numberObj = new NumberObj(sector, this.center)
+            numberObj.setActive(this.activeLayerI /* =-1 */)
+            this._numbers.push(numberObj);
+
+            this.groupOcl.add(numberObj.light);
+            this.groupOcl.add(sector);
+
+        })
+
+        for (let i = 0; i < 5; ++i) {
+            this.cut_dice.push(null);
+        }
+    }
+
+    _numbers = []//1-20 - по слоям до 1,21,31,41,51,61,71,81,91
+    setNumbers(target, layer, meshNumber) {
+        const numberObj = this._numbers[target];
+
+        numberObj.addMeshsNumbers(layer, meshNumber)
+        // numberObj.setActive(this.activeLayerI)
+
+        this.group.add(meshNumber);
+
+        // this.group.add(obj_n_sector)
+        // obj_n_sector.material = this.dice_Material
+    }
+
+
+    cut_dice = []
+    active_mesh_dice = null
+    gmat = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
+    dice_Material// = new THREE.MeshPhysicalMaterial()
+
+    setCutDice(layer, optionsDice, mesh_dice) {
+        //material mesh_dice
+        if (!this.dice_Material) {
+            this.dice_Material = new THREE.MeshPhysicalMaterial()
+            const mat = this.dice_Material;
             mat.reflectivity = optionsDice.reflectivity
             mat.roughness = optionsDice.roughness
             mat.transmission = optionsDice.transmission
@@ -75,41 +127,28 @@ export class Dice {
 
             mat.bumpScale = optionsDice.bumpScale
         }
-        //material diceIn
-        if (true) {
-            mesh_diceIn.scale.set(optionsDiceIn.scale, optionsDiceIn.scale, optionsDiceIn.scale)
+        mesh_dice.material = this.dice_Material;
+        this.group.add(mesh_dice)
+        this.groupOcl.add(H.cloneGeometry(mesh_dice, this.gmat));
 
-            mesh_diceIn.material = new THREE.MeshStandardMaterial()
-            const mat = mesh_diceIn.material
-            mat.roughness = optionsDiceIn.roughness
-            mat.metalness = optionsDiceIn.metalness
-
-            mat.bumpScale = optionsDiceIn.bumpScale
-            mat.bumpMap = this.dice_bump_in
-        }
-
-        this.center = H.getCenter(mesh_dice);
-        this.radius = mesh_dice.geometry.boundingSphere.radius
-
-        this.mesh_dice = mesh_dice
-        this.mesh_diceIn = mesh_diceIn
-
-        this.group.add(mesh_dice, mesh_diceIn)
-
-        const gmat = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
-        this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
+        this.cut_dice[layer] = mesh_dice;
+        mesh_dice.visible = false
     }
 
-    _numbers = []
-    addNumber(i, meshNumber, obj_n_sector) {
-        const numberObj = new NumberObj(i, meshNumber, obj_n_sector, this.center)
+    activeLayerI = -1
+    setActiveMesh(layerI) {
+        if (layerI == null) return
+        if (this.activeLayerI == layerI) return;
+        this.activeLayerI = layerI;
+        // console.log("setActiveMesh", layerI);
+        if (this.active_mesh_dice) this.active_mesh_dice.visible = false;
+        this.active_mesh_dice = this.cut_dice[layerI];
+        this.active_mesh_dice.visible = true;
 
-        this._numbers.push(numberObj);
-
-        this.group.add(meshNumber);
-
-        this.groupOcl.add(numberObj.light);
-        this.groupOcl.add(obj_n_sector);
+        this._numbers.forEach((number, i) => {
+            // console.log(i);
+            number.setActive(layerI);
+        })
     }
 
     resetColor() {
@@ -220,9 +259,22 @@ export class Dice {
     dAngle_gp //not null
     _sel_num = 0
 
-    initGui(gui = null) {
+
+    layerToNum(toNum = options.rotating.toNum) {
+        let tmp = toNum % 20
+        return tmp == 0 ? 20 : tmp
+    }
+
+    selectLayer(targetNum = this._sel_num) {
+        let ret = Math.max(0, Math.ceil(targetNum / 20) - 1)
+        // console.log(`selectLayer ${targetNum} -> ${ret}`);
+        return ret
+    }
+    start(gui = null) {
         this.dAngle_gp = gui
         this._sel_num = options.rotating.toNum
+        this._targetLayerFromNum = this.selectLayer()
+        this.setActiveMesh(this._targetLayerFromNum)
         this.update_number(true, true)
         this.to_angle = H.Vecor3Copy(this.from_angle)
         return this.dAngle_gp
@@ -256,7 +308,7 @@ export class Dice {
     from_angle;
     to_angle;
 
-    getNameAngle(iNum) {
+    getNameAngle(iNum = this.layerToNum()) {
         return `pos-dn_${iNum}`
     }
 
@@ -268,7 +320,7 @@ export class Dice {
         }
 
         let dAngle = options.position.dAngle
-        let name = this.getNameAngle(this._sel_num)
+        let name = this.getNameAngle(this.layerToNum(this._sel_num) % 20)
         if (read) {
             dAngle = S.Get(name, new THREE.Vector3())
             options.position.dAngle = dAngle
@@ -354,6 +406,26 @@ export class Dice {
     _endInOut = -1
     _startProc = -1
 
+    update(elapsed_time, updateAnimGoodRay_in = (pos_anim) => { }, updateAnimGoodRay_out = (percent) => { }) {
+        let percent_anim_camera = 0;
+        if (this._startIn > 0) {
+            let pos_anim = this.updateAnimInProcess(elapsed_time)
+            updateAnimGoodRay_in(pos_anim);
+            percent_anim_camera = H.easeOutCirc(this._pc_anim)
+        }
+        else if (this._startProc > 0) {
+            percent_anim_camera = 1
+            let pos_anim = this.updateAnimInProcess(elapsed_time)
+            updateAnimGoodRay_in(pos_anim);
+        }
+        else if (this._startOut > 0) {
+            this.updateAnimOut(elapsed_time, updateAnimGoodRay_out)
+            percent_anim_camera = 1 - H.easeOutCubic(this._pc_anim)
+        }
+        return percent_anim_camera;
+    }
+
+
     p_startOut = -1
     _out_step1 = false
     _out_step2 = false
@@ -367,13 +439,13 @@ export class Dice {
     _ftInAngle = { f: null, t: null }
     startIn(elapsedTime) {
         this._startIn = elapsedTime
-        this._startInAnim = -1
+        this._startInAnimRec = -1
         this._endInOut = elapsedTime + options.rotating.durationIn
         this._startProc = -1
         this._startOut = -1
         // this._ftInAngle.f = S.GetV3(this.getNameAngle(this._sel_num))
         this._ftInAngle.f = H.Vecor3Copy(options.position.dAngle)
-        this._ftInAngle.t = S.GetV3(this.getNameAngle(options.rotating.toNum))
+        this._ftInAngle.t = S.GetV3(this.getNameAngle())
     }
 
     processed(elapsedTime) {
@@ -392,6 +464,17 @@ export class Dice {
     }
 
     startOut(elapsedTime) {
+
+        if (this._startIn == -1 && this._startProc == -1) {
+            //небыли в процессе и после половины таймера
+            //непоменяли слои
+            //меняем тут!
+            this.getSpiralLayer()
+            this.setActiveMesh(this._targetLayerFromNum)
+            this._targetLayerFromNum = null;
+        }
+
+
         this.resetColor()
         this._startIn = -1
         this._endInOut = elapsedTime + options.rotating.durationOut
@@ -399,14 +482,16 @@ export class Dice {
         this._startOut = elapsedTime
 
         this._ftInAngle.f = H.Vecor3Copy(options.position.dAngle, H.PI2)
-        this._ftInAngle.t = S.GetV3(this.getNameAngle(options.rotating.toNum))
+        this._ftInAngle.t = S.GetV3(this.getNameAngle())
     }
 
     _stop(force = false) {
         this._startIn = -1
         // this._endInOut = -1
         this._startProc = -1
-        if (force) { this._startOut = -1 }
+        if (force) {
+            this._startOut = -1
+        }
     }
 
     _prc = {
@@ -440,7 +525,8 @@ export class Dice {
             return {
                 x: H.ft(0, 1, prc, this._prc.fx),
                 y: H.ft(0, 1, prc, this._prc.fy),
-                z: H.ft(0, 1, prc, this._prc.fz)
+                z: H.ft(0, 1, prc, this._prc.fz),
+                prc: prc
             }
 
         },
@@ -457,7 +543,7 @@ export class Dice {
             H.ft(0.0, 1.14, percent, H.easeInQuint) :
             H.ft(0.0, 0.13, percent, H.easeInQuint)
 
-        this.getLayersFrom(options.rotating.toNum).forEach((layer, iL) => {
+        this.getLayersFrom().forEach((layer, iL) => {
             layer.forEach((objNum, i) => {
 
                 if (first) {
@@ -488,20 +574,24 @@ export class Dice {
         })
     }
 
+    _pc_anim = 0
     updateRotation(elapsedTime) {
 
-        let pc_anim = 0;
+        this.pc_anim = 0;
         //Выход
         if (this._startOut != -1) {
-            pc_anim = H.mod(elapsedTime - this._startOut, options.rotating.durationOut) / options.rotating.durationOut
+            this.setActiveMesh(this._targetLayerFromNum)
+            if (this._targetLayerFromNum != null) this._targetLayerFromNum = null;
+
+            this._pc_anim = H.mod(elapsedTime - this._startOut, options.rotating.durationOut) / options.rotating.durationOut
 
             let hasEnd = false
             if (elapsedTime >= this._endInOut) {
-                pc_anim = 1.0
+                this._pc_anim = 1.0
                 hasEnd = true
             }
 
-            let r_pc_anim = H.ft(0, 1, pc_anim, H.easeOutCubic)
+            let r_pc_anim = H.ft(0, 1, this._pc_anim, H.easeOutCubic)
             this.animRotate(r_pc_anim, 0, this._ftInAngle.f, this._ftInAngle.t, false)
 
             if (hasEnd) {
@@ -510,18 +600,18 @@ export class Dice {
         }
         //Старт
         if (this._startIn != -1) {
-            pc_anim = H.mod(elapsedTime - this._startIn, options.rotating.durationIn) / options.rotating.durationIn
+            this._pc_anim = H.mod(elapsedTime - this._startIn, options.rotating.durationIn) / options.rotating.durationIn
 
             let hasEnd = false
             if (elapsedTime >= this._endInOut) {
-                pc_anim = 1.0
+                this._pc_anim = 1.0
                 hasEnd = true
             }
-            // pc_anim = H.ft(0, 1, pc_anim, H.easeInCubic)
-            pc_anim = H.ft(0, 1, pc_anim, H.easeInSine)
-            this.animRotate(pc_anim, 0, this._ftInAngle.f, this._ftInAngle.t, false)
+            // this._pc_anim = H.ft(0, 1, this._pc_anim, H.easeInCubic)
+            this._pc_anim = H.ft(0, 1, this._pc_anim, H.easeInSine)
+            this.animRotate(this._pc_anim, 0, this._ftInAngle.f, this._ftInAngle.t, false)
 
-            if (pc_anim >= 1.0 || hasEnd) {
+            if (this._pc_anim >= 1.0 || hasEnd) {
                 this.processed(elapsedTime)
             }
         }
@@ -532,17 +622,22 @@ export class Dice {
                 this.processed(elapsedTime)
             }
 
-            // let pc_anim = H.mod(elapsedTime - this._startProc, options.rotating.durationPrc) / options.rotating.durationPrc
-            // this.animRotate(pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, true)
+            // let this._pc_anim = H.mod(elapsedTime - this._startProc, options.rotating.durationPrc) / options.rotating.durationPrc
+            // this.animRotate(this._pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, true)
 
-            pc_anim = this._prc.update(elapsedTime)
-            this.animRotate2(pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, false)
+            this._pc_anim = this._prc.update(elapsedTime)
+            this.animRotate2(this._pc_anim, H.PI2, this._ftInAngle.f, this._ftInAngle.t, false)
+            if (this._pc_anim.prc >= 0.5) {
+                this._startInAnimRec = -1
+                this.setActiveMesh(this._targetLayerFromNum)
+                this._targetLayerFromNum = null;
+            }
         }
-        return pc_anim
+        return this._pc_anim
     }
 
     _startOut2 = -1
-    animOut(elapsedTime, outAnim = (x) => { }) {
+    updateAnimOut(elapsedTime, outAnim = (percent) => { }) {
         let pos_out_anim = -1
         let pos_preparation = 0
         if (this._startOut > 0) {
@@ -588,27 +683,35 @@ export class Dice {
         }
     }
 
-    _startInAnim = -1
-    animInP(elapsedTime, inAnim = (x) => { }) {
+    _startInAnimRec = -1
+    updateAnimInProcess(elapsedTime) {
 
-        if (this._startInAnim == -1 && this._startIn > 0) {
-            this._startInAnim = this._startIn
+        if (this._startInAnimRec == -1 && this._startIn > 0) {
+            this._startInAnimRec = this._startIn
         }
         const duration = options.rotating.durationIn * 0.25
-        let pos_out_anim = Math.min(1, (elapsedTime - this._startInAnim) / duration)
+        let pos_out_anim = Math.min(1, (elapsedTime - this._startInAnimRec) / duration)
         pos_out_anim = H.easeOutCubic(pos_out_anim)
 
         let rLayer = this.getSpiralLayer()
         rLayer.forEach((objNum, i) => {
             objNum.setStartColor(i, pos_out_anim, elapsedTime)
         })
-        inAnim(pos_out_anim)
+        return pos_out_anim;
     }
 
+    //#####################################################################################################################
+    //#####################################################################################################################
     _spiralLayer = []
     _sLayerI = 0
-    getSpiralLayer(iNum = options.rotating.toNum) {
+    _targetLayerFromNum = null
+    getSpiralLayer(targetNum = options.rotating.toNum) {
+
+        let iNum = this.layerToNum(targetNum)
+        this._targetLayerFromNum = this.selectLayer(targetNum)
+        // console.log(`--getSpiralLayer(${targetNum}) ${this._sLayerI} ${iNum}     `)
         if (this._sLayerI == iNum) return this._spiralLayer
+
         this._sLayerI = iNum
         let _tmpMap = []
         this._spiralLayer = []
@@ -627,16 +730,16 @@ export class Dice {
 
     _layerI = 0
     _currLayes = null
-    getLayersFrom(iNum = options.rotating.toNum) {
-        if (this._layerI == iNum) return this._currLayes
-        this._layerI = iNum
+    getLayersFrom(layerToNum = this.layerToNum()) {
+        if (this._layerI == layerToNum) return this._currLayes
+        this._layerI = layerToNum
         let _tmpMap = []
         this._currLayes = []
-        _tmpMap = this.layer_anim[iNum]
+        _tmpMap = this.layer_anim[layerToNum]
         _tmpMap.forEach((layer, il) => {
             var newObjs = []
             if (il == 0) {
-                this._currLayes.push([this._numbers[iNum - 1]])
+                this._currLayes.push([this._numbers[layerToNum - 1]])
             }
             layer.forEach((idN, i) => {
                 newObjs.push(this._numbers[idN - 1])

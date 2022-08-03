@@ -5,11 +5,11 @@ import { options } from './options.js'
 
 export class NumberObj {
 
-    i = -1
-    constructor(i, meshNumber, obj_n_sector, diceCentr) {
-        this.i = i
+    meshsNumber = []
+    activeMesh = null
+    center = null
+    constructor(obj_n_sector, diceCentr) {
         this.diceCentr = diceCentr.clone()
-        this.mesh = meshNumber
         //____________________
         this.light = new THREE.Mesh(
             new THREE.IcosahedronGeometry(0.35, 20),
@@ -18,15 +18,36 @@ export class NumberObj {
         this.light.position.copy(diceCentr);
         //____________________
         this.sector = obj_n_sector
-        this.center = H.getCenter(meshNumber)
+        //__
+        for (let i = 0; i < 20; ++i) {
+            this.meshsNumber.push(null);
+        }
+    }
 
-        const t_sub = new Vector3().subVectors(diceCentr, this.center);
+    addMeshsNumbers(layer, meshNumber) {
+        this.meshsNumber[layer] = meshNumber
+
+        //__
+        if (this.center == null) {
+            this.center = H.getCenter(meshNumber)
+        }
+
+        const t_sub = new Vector3().subVectors(this.diceCentr, this.center);
         this.lenghtToPos = t_sub.length();//длинна от центра до цифры
         this.normalToPos = t_sub.normalize();//нормаль в сторону положения числа
 
         //____________________
-        meshNumber.material = new THREE.MeshBasicMaterial();
+        const basicMaterial = new THREE.MeshBasicMaterial();
+        const pl = this.lenghtToPos * options.anim.position_number;
+        const normal = this.normalToPos.clone()
+        const new_pos = new Vector3().copy(this.diceCentr).add(normal.multiplyScalar(-pl));
+
+
+        meshNumber.material = basicMaterial
+
         this.setColor(
+            meshNumber,
+
             options.anim.color.h,
             options.anim.color.l,
             options.anim.color.s
@@ -34,14 +55,23 @@ export class NumberObj {
         //____________________
         // obj_n_sector.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: null });
         // this.groupOcl.add(H.cloneGeometry(mesh_dice, gmat));
-
-        //____________________
-
-        const pl = this.lenghtToPos * options.anim.position_number;
-        const normal = this.normalToPos.clone()
-        const new_pos = new Vector3().copy(diceCentr).add(normal.multiplyScalar(-pl));
         meshNumber.position.copy(new_pos)
-        //_____________
+        //__________-
+        meshNumber.visible = false;
+    }
+    setActive(layerI) {
+        // console.log("setActive", layerI);
+        if (layerI == -1) return;
+
+        this.meshsNumber.forEach(mesh => {
+            if (!mesh) return
+            mesh.visible = false;
+        })
+        this.activeMesh = this.meshsNumber[layerI];
+        if (!this.activeMesh) {
+            console.log(this.activeMesh, layerI);
+        }
+        this.activeMesh.visible = true;
     }
 
     _color_s2 = false
@@ -137,14 +167,15 @@ export class NumberObj {
         const curr_h = H.ft(cH.s, cH.e, tp, cH.easeInOutSine)
         const curr_s = H.ft(cS.s, cS.e, tp, cH.easeInOutSine)
 
-        let color = this.setColor(curr_h, options.anim.color.l, curr_s)
+        let color = this.setColor(this.activeMesh,
+            curr_h, options.anim.color.l, curr_s)
 
         this.light.material.color.set(color)
     }
 
-    setColor(h, l, s) {
+    setColor(targetMesh, h, l, s) {
         this.color = { h: h, l: l, s: s }
-        return this.mesh.material.color.setHSL(this.color.h, this.color.l, this.color.s);
+        return targetMesh.material.color.setHSL(this.color.h, this.color.l, this.color.s);
     }
 
     setPreparation(pc_anim) {
@@ -157,7 +188,7 @@ export class NumberObj {
             options.anim.color.s,
             pc_anim, H.easeOutSine)
 
-        this.mesh.material.color.setHSL(curr_h, this.color.l, curr_s);
+        this.activeMesh.material.color.setHSL(curr_h, this.color.l, curr_s);
     }
 
     setLightParam(pos, radius) {
