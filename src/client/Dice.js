@@ -41,7 +41,7 @@ export class Dice {
         const textureLoader = new THREE.TextureLoader();
         this.dice_map = textureLoader.load("data/barhat.jpeg");
         this.dice_bump_in = textureLoader.load("data/noise_bump_in_1.png");
-        this.dice_bump = textureLoader.load("data/barhat_bump.jpg");
+        // this.dice_bump = textureLoader.load("data/barhat_bump.jpg");
     }
 
     initDice(mesh_diceIn, optionsDiceIn, objs_sector) {

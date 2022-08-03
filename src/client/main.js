@@ -433,7 +433,7 @@ window.create_anim = function (id_block = "canvas-container", start_num = option
 
 
 
-			dice_gp.add(options.dice, "typeBump", ["none", "type_1", "type_2"]).onChange((value) => {
+			/* dice_gp.add(options.dice, "typeBump", ["none", "type_1", "type_2"]).onChange((value) => {
 				S.Set("dice-typeBump", value)
 
 				switch (value) {
@@ -449,7 +449,7 @@ window.create_anim = function (id_block = "canvas-container", start_num = option
 				}
 
 				mDice.dice_Material.needsUpdate = true;
-			});
+			}); */
 			dice_gp.add(options.dice, "bumpScale", 0, 3, 0.01).onChange((value) => {
 				mDice.dice_Material.bumpScale = S.Set("dice-bumpScale", value)
 			});
